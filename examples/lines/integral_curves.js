@@ -1,6 +1,6 @@
 const io   = require('@youwol/io')
 const fs   = require('fs')
-const lib = require('../../dist/@taboada/stress')
+const lib = require('../../dist/@alfredicus/stress')
 
 const c = new lib.Curve3D()
 

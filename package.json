@@ -1,10 +1,10 @@
 {
-    "name": "@taboada/stress",
+    "name": "@alfredicus/stress",
     "version": "0.0.0",
     "description": "First course on TypeScript",
     "author": "",
     "keywords": [],
-    "main": "dist/@taboada/stress.js",
+    "main": "dist/@alfredicus/stress.js",
     "types": "src/index.ts",
     "scripts": {
         "build": "yarn build:dev",
