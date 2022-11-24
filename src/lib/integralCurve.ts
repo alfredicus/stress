@@ -1,6 +1,7 @@
 import { Curve3D } from "./Curve3D"
+import { GenericCurve } from "./types"
 
-export class IntegralCurve {
+export class IntegralCurve implements GenericCurve {
     private r: number
     private exp_cos: number
     private exp_sin: number
@@ -16,9 +17,8 @@ export class IntegralCurve {
      * @param theta In degrees
      * @param phi In degrees
      */
-    getIntegral(theta: number, phi: number): string {
+    generate(theta: number, phi: number): string {
         const lineBuilder = new Curve3D()
-        let buffer = ''
         let phi_1 = Math.PI * phi /180
         let theta_1 = Math.PI * theta /180
 
@@ -27,40 +27,15 @@ export class IntegralCurve {
         let k1 = Math.tan(theta_1) / ( Math.sin(phi_1)**this.exp_sin * Math.cos(phi_1)**this.exp_cos )
 
         // Plot the integral curve that passes by this specific point
-        for (let i=1; i<=89; ++i) {
-            const phi = Math.PI * i/180
+        for (let i=0; i<=180; ++i) {
+            const phi = Math.PI * i/360
             const theta = Math.atan( k1 * Math.sin(phi)**this.exp_sin * Math.cos(phi)**this.exp_cos )
             const x = this.r * Math.sin(theta) * Math.cos(phi)
             const y = this.r * Math.sin(theta) * Math.sin(phi)
             const z = this.r * Math.cos(theta)
             lineBuilder.addPoint(x, y, z)
         }
-        buffer += lineBuilder.buffer + '\n'
-
-        lineBuilder.clear()
-
-        // The integral lines derive form a scalr function defined by the normal force component
-        // Fn = (this.lambda[0] * cos(phi)**2 +this.lambda[1] * sin(phi)**2 ) * sin(theta)**2 + this.lambda[2] * ( 1 - sin(theta)**2 )
-        let Fn = (this.lambda[0] * Math.cos(phi_1)**2 +this.lambda[1] * Math.sin(phi_1)**2 ) * Math.sin(theta_1)**2 + this.lambda[2] * ( 1 - Math.sin(theta_1)**2 )
-
-        // Plot equipotential of the normal force that passes through the fixed point
-        for (let i=1; i<=89; ++i) {
-            const phi = Math.PI * i/180
-            const var1 =  ( Fn - this.lambda[2]) / ( this.lambda[0] * Math.cos(phi)**2 + this.lambda[1] * Math.sin(phi)**2 - this.lambda[2] )
-            if (var1 >= 0 && var1 <= 1 ) {
-                // const theta = Math.asin( Math.sqrt( ( Fn - this.lambda[2]) / ( this.lambda[0] * Math.cos(phi)**2 + this.lambda[1] * Math.sin(phi)**2 - this.lambda[2] ) ) )
-                const theta = Math.asin( Math.sqrt( var1 ) )
-                const x = this.r * Math.sin(theta) * Math.cos(phi)
-                const y = this.r * Math.sin(theta) * Math.sin(phi)
-                const z = this.r * Math.cos(theta)
-                lineBuilder.addPoint(x, y, z)
-            } 
-        }
-        buffer += lineBuilder.buffer + '\n'
-
-        return buffer
+        
+        return lineBuilder.buffer
     }
 }
-
-
-

@@ -1,9 +1,15 @@
+import { Point3D } from "./types"
 
 export class Curve3D {
     private points: Array<number> = []
 
-    addPoint(x: number, y: number, z: number = 0) {
-        this.points.push(x,y,z)
+    addPoint(x: number | Point3D, y?: number, z: number = 0) {
+        if (typeof x === 'number') {
+            this.points.push(x,y,z)
+        }
+        else {
+            this.points.push(x[0], x[1], x[2])
+        }
     }
 
     clear() {
