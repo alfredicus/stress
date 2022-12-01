@@ -872,10 +872,10 @@
   resolved "https://registry.yarnpkg.com/@youwol/dataframe/-/dataframe-0.0.34.tgz#668ed5a75e8dd9ec85f9a56e3aff20c2078d6fd2"
   integrity sha512-o5Bhv+C6Aza+2J/leCxNMMBHYK6AU7EWslsUOX/dBZORZ1Uiae2DgFes8rUGeB38Zk3jAbPxfl31kBPpQXFvkg==
 
-"@youwol/geometry@^0.0.19":
-  version "0.0.19"
-  resolved "https://registry.yarnpkg.com/@youwol/geometry/-/geometry-0.0.19.tgz#71b983f37601c1d7cecadb2b1283d54a26cfd140"
-  integrity sha512-x3t01w6XGlaXhATz4yfRU8L+I5KySSNfm5lNBOEitybi4kgrcgtJ0wOrgNHnSGsHepq23VG3QZjyWIw9HcFl+w==
+"@youwol/geometry@^0.0.21":
+  version "0.0.21"
+  resolved "https://registry.yarnpkg.com/@youwol/geometry/-/geometry-0.0.21.tgz#820f76a69e6d1cb6b9392520aba64b326e042047"
+  integrity sha512-SZI1z9iOTmqaG4HPUueC+Vh4/LDpI4AKUOy1l3jSa64MOBUOi3get64hx3nBrQL6D1vQcy48tSmpbqJ8J6cUVg==
 
 "@youwol/io@0.0.20":
   version "0.0.20"

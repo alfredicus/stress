@@ -17,7 +17,7 @@
     },
     "dependencies": {
         "@youwol/dataframe": "^0.0.34",
-        "@youwol/geometry": "^0.0.19",
+        "@youwol/geometry": "^0.0.21",
         "@youwol/io": "^0.0.24",
         "@youwol/math": "^0.0.20"
     },

@@ -1,5 +1,5 @@
 import { Curve3D } from "./Curve3D"
-import { Matrix3x3, MohrPoint, newMatrix3x3, newPoint3D, Point3D } from "./types"
+import { Matrix3x3, MohrPoint, newPoint3D, Point3D, SphericalCoords } from "./types"
 
 export function deg2rad(a: number): number {
     return a*Math.PI/180
@@ -39,7 +39,7 @@ export function mohrCircleLine(
         let sigma_Y = sigma_3
         let sigma_Z = sigma_2
 
-        for (let i = 1; i <= 180; ++i) {
+        for (let i = 1; i < 180; ++i) {
             let X = first.p[0] + (second.p[0] - first.p[0]) * i / 180
             let Y = first.p[1] + (second.p[1] - first.p[1]) * i / 180
 
@@ -72,11 +72,6 @@ export function mohrCirclePoint(
         // alfa is the azimuthal angle in the reference frame (x,y,z) = (sigma_1,sigma_3, sigma_2) = (East, North, Up)
         const theta = Math.PI / 2
         const phi = alfa
-
-        const c1 = r * Math.sin(theta) * Math.cos(phi)
-        const c2 = r * Math.sin(theta) * Math.sin(phi)
-        const c3 = r * Math.cos(theta)
-        const c4 =0
 
         return [
             r * Math.sin(theta) * Math.cos(phi),
@@ -160,59 +155,39 @@ export function arcCircle(
     return lineBuilder.buffer
 }
 
-export function rotationMatrix(
-    {phiS1, thetaS1, betaS3}:
-    {phiS1: number, thetaS1: number, betaS3: number})
+export function lineSphericalCoords(
+    {trend, plunge}:
+    {trend: number, plunge: number}): SphericalCoords
 {
-    // We calculate the rotation matrix RT (R Transposed) such that:
-    //      X = RT X',  where X and X' are vectors in refereence frames S and S'
+    // The principal stress axes and microfault data such as stylolites can be represented by lines.
+    // A line is defined by its trend and plunge angles in the geographic reference system:
+    // trend = azimuth of the line in interval [0, 360), measured clockwise from the North direction
+    // plunge =  vertical angle between the horizontal plane and the sigma 1 axis (positive downward), in interval [0,90]
 
-    // S' = (X',Y',Z') is the principal stress reference frame, parallel to (sigma_1, sigma_3, sigma_2);
-    // S =  (X, Y, Z ) is the geographic reference frame  oriented in (East, North, Up)directions.
+    // (phi,theta) : spherical coordinate angles defining the unit vector in the geographic reference system: S = (X,Y,Z) = (E,N,Up)
+    
+    // phi : azimuthal angle in interval [0, 2 PI), measured anticlockwise from the X axis (East direction) in reference system S
+    // theta: colatitude or polar angle in interval [0, PI/2], measured downward from the zenith (upward direction)
 
-    // The pricipal axis X', which corresponds to sigma_1, is defined by two angles in spherical coordinates:
-    //      The azimuth phi1 in interval [0, 2 PI), measured anticlockwise from the X axis (East direction)
-    //      The colatitude or polar angle theta1 in interval [0, PI), measured downward from the zenith (upward direction)
+    let phi = trend2phi(trend)
 
-    // The principal axis Y', which corresponds to sigma_3, is defined by an angle beta in the plane perpendicular to sigma1 :
-    //      beta in interval [0, PI), is measured anticlockwise from the horizontal direction
+    let theta = deg2rad( plunge ) + Math.PI / 2
 
-    // phi1, theta1, and beta are choosen by the user in the prescribed intervals
+    return new SphericalCoords({phi, theta})
+}
 
-    // The columns of matrix RT are given by the unit vectors parallel to X1', X2', and X3' defined in reference system S:
-    // Sigma_1 axis: Unit vector e1'
+export function trend2phi(trend: number): number {
+    // Calculate the value of phi from the trend
+    // trend = azimuth of the line in interval [0, 360), measured clockwise from the North direction
+    // phi : azimuthal angle in interval [0, 2 PI), measured anticlockwise from the X axis (East direction) in reference system S
 
-    const RTr: Matrix3x3 = newMatrix3x3()
-    RTr[0][0] = Math.sin(thetaS1) * Math.cos(phiS1)
-    RTr[1][0] = Math.sin(thetaS1) * Math.sin(phiS1)
-    RTr[2][0] = Math.cos(thetaS1)
+    // trend + phi = 5 PI / 4
+    let phi = 5 * Math.PI / 4 - deg2rad( trend )
 
-    // Sigma_3 axis: unit vector e2'
-    // u2 is a unit vector parallel to the azimuth of the plane perpendicular to sigma_1:
-    const u2 = newPoint3D()
-    u2[0] = Math.cos(phiS1 + Math.PI/2)
-    u2[1] = Math.sin(phiS1 + Math.PI/2)
-    u2[2] = 0
-
-    // v2 is a unit vector parallel to the dip (pointing upward) of the plane perpendicular to sigma_1:
-    const v2 = newPoint3D()
-    v2[0] =  Math.cos(thetaS1) * Math.cos(phiS1 + Math.PI)
-    v2[1] =  Math.cos(thetaS1) * Math.sin(phiS1 + Math.PI)
-    v2[2] =  Math.sin(thetaS1)
-
-    // e2' (Sigma_3) is a unit vector in the plane (u2, V2) at an angle beta relative to u2: 
-    RTr[0][1] = u2[0] * Math.cos(betaS3) + v2[0] * Math.sin(betaS3)
-    RTr[1][1] = u2[1] * Math.cos(betaS3) + v2[1] * Math.sin(betaS3)
-    RTr[2][1] = u2[2] * Math.cos(betaS3) + v2[2] * Math.sin(betaS3)
-
-    // Sigma_2 axis: unit vector e3'
-    // e3' is calculated form the cross product e3' = e1' x e2' :
-
-    RTr[0][2] = RTr[1][0] * RTr[2][1] - RTr[2][0] * RTr[1][1] 
-    RTr[1][2] = RTr[2][0] * RTr[0][1] - RTr[0][0] * RTr[2][1]
-    RTr[2][2] = RTr[0][0] * RTr[1][1] - RTr[1][0] * RTr[0][1]
-
-    return RTr
+    if ( phi >= 2 * Math.PI) {
+        phi -= 2 * Math.PI
+    }
+    return phi
 }
 
 export function VectorRot(
@@ -229,6 +204,7 @@ export function VectorRot(
 
     return VT
 }
+
 
 export function fault(
     {r, sigma, alpha}:

@@ -22,6 +22,17 @@ export enum SensOfMovement {
     UKN
 }
 
+export enum Direction {
+    E, // 0
+    W, // 1
+    N, // 2
+    S, // 3
+    NE, // 4
+    SE, // 5
+    SW, // 6
+    NW // 7
+}
+
 // Each fault comprises information concerning the geometry, the stress parameters and the kinematic parameters:
 
 /**
@@ -29,13 +40,13 @@ export enum SensOfMovement {
  * 
  * Usage:
  * ```ts
- * const f = new Fault({strike: 30, dipDirection: 'E', dip: 60})
- * f.setStriation({rake: 20, strikeDirection: 'N', sensMouv: 'LL'})
+ * const f = new Fault({strike: 30, dipDirection: Direction.E, dip: 60})
+ * f.setStriation({rake: 20, strikeDirection: Direction.N, sensMouv: 'LL'})
  * ```
  */
 export class Fault {
 
-    constructor({strike, dipDirection, dip}:{strike: number, dipDirection: string, dip: number}) {
+    constructor({strike, dipDirection, dip}:{strike: number, dipDirection: Direction, dip: number}) {
         this.strike = strike
         this.dipDirection = dipDirection
         this.dip = dip
@@ -43,7 +54,7 @@ export class Fault {
     }
 
     /**
-     * Set the orientation of the striation in the fault plane can defined in two different ways (which are exclusive):
+     * Set the orientation of the striation in the fault plane, which can defined in two different ways (which are exclusive):
      * 1. Rake (or pitch) [0,90], measured from the strike direction, which points in one of the two opposite directions of the fault strike.
      *   Strike direction : (N, E, S, W) or a combination of two direction (NE, SE, SW, NW).
      * 2. For shallow-dipping planes (i.e., the compass inclinometer is inaccurate):
@@ -51,9 +62,14 @@ export class Fault {
      */
     setStriation(
         {rake, strikeDirection, striationTrend, sensMouv}:
-        {rake?: number, strikeDirection?: string, striationTrend?: number, sensMouv: SensOfMovement})
+        {rake?: number, strikeDirection?: Direction, striationTrend?: number, sensMouv: SensOfMovement})
     {
         // check and set
+        this.rake = rake
+        this.strikeDirection = strikeDirection
+        this.striationTrend = striationTrend
+        this.sensMouv = sensMouv
+        this.faultSphericalCoords()
     }
 
     // --------------------------------------
@@ -65,10 +81,10 @@ export class Fault {
     //      Dip direction: (N, E, S, W) or a combination of two directions (NE, SE, SW, NW).
     private strike:             number
     private dip:                number
-    private dipDirection:       string
+    private dipDirection:       Direction
 
     private rake:               number
-    private strikeDirection:    string
+    private strikeDirection:    Direction
     private striationTrend:     number
     // Sense of mouvement: For verification purposes, it is recommended to indicate both the dip-slip and strike-slip compoenents, when possible. 
     //      Dip-slip component:
@@ -111,7 +127,7 @@ export class Fault {
     private alphaStriaDeg = 0
     private alphaStria = 0
 
-    private upliftedBlock: string
+    private upliftedBlock: Direction
 
     private isUpLiftedBlock: boolean = false
 
@@ -155,40 +171,40 @@ export class Fault {
         }
         else if ( this.strike === 0 ) {    // The fault plane is not vertical and the dip direction is defined
     
-            if ( this.dipDirection = 'E' ) {
+            if ( this.dipDirection = Direction.E ) {
                 this.phi = 0
-            } else if ( this.dipDirection = 'W' ) {
+            } else if ( this.dipDirection = Direction.W ) {
                 this.phi = Math.PI
             } else {
                 throw new Error(`dip direction is wrong. Should be E or W`)
             }
         } else if ( this.strike < 90 ){
     
-            if ( ( this.dipDirection = 'S' ) || ( this.dipDirection = 'E' ) || ( this.dipDirection = 'SE' ) ) {
+            if ( ( this.dipDirection = Direction.S ) || ( this.dipDirection = Direction.E ) || ( this.dipDirection = Direction.SE ) ) {
                 // this.strike + this.phi = 2Pi
                 this.phi = 2 * Math.PI - deg2rad( this.strike ) 
     
-            } else if ( ( this.dipDirection = 'N' ) || ( this.dipDirection = 'W' ) || ( this.dipDirection = 'NW' ) ) {
+            } else if ( ( this.dipDirection = Direction.N ) || ( this.dipDirection = Direction.W ) || ( this.dipDirection = Direction.NW ) ) {
                 // this.strike + this.phi = Pi
                 this.phi = Math.PI - deg2rad( this.strike ) 
             } else {
                 throw new Error(`dip direction is wrong. Should be N, S, E, W, SE or NW`)
             }    
         } else if ( this.strike === 90 ) {
-            if ( this.dipDirection = 'S' ) {
+            if ( this.dipDirection = Direction.S ) {
                 this.phi = 3 * Math.PI / 2
-            } else if ( this.dipDirection = 'N' ) {
+            } else if ( this.dipDirection = Direction.N ) {
                 this.phi = Math.PI / 2
             } else {
                 throw new Error(`dip direction is wrong. Should be N or S`)
             }
         } else if ( this.strike < 180 ){
     
-            if ( ( this.dipDirection = 'S' ) || ( this.dipDirection = 'W' ) || ( this.dipDirection = 'SW' ) ) {
+            if ( ( this.dipDirection = Direction.S ) || ( this.dipDirection = Direction.W ) || ( this.dipDirection = Direction.SW ) ) {
                 // this.strike + this.phi = 2Pi
                 this.phi = 2 * Math.PI - deg2rad( this.strike ) 
     
-            } else if ( ( this.dipDirection = 'N' ) || ( this.dipDirection = 'E' ) || ( this.dipDirection = 'NE' ) ) {
+            } else if ( ( this.dipDirection = Direction.N ) || ( this.dipDirection = Direction.E ) || ( this.dipDirection = Direction.NE ) ) {
                 // this.strike + this.phi = Pi
                 this.phi = Math.PI - deg2rad( this.strike ) 
             } else {
@@ -196,20 +212,20 @@ export class Fault {
             }    
         }
         else if ( this.strike === 180 ) {
-            if ( this.dipDirection = 'W' ) {
+            if ( this.dipDirection = Direction.W ) {
                 this.phi = Math.PI
-            } else if ( this.dipDirection = 'E' ) {
+            } else if ( this.dipDirection = Direction.E ) {
                 this.phi = 0
             } else {
                 throw new Error(`dip direction is wrong. Should be E or W`)
             }
         } else if ( this.strike < 270 ){
     
-            if ( ( this.dipDirection = 'N' ) || ( this.dipDirection = 'W' ) || ( this.dipDirection = 'NW' ) ) {
+            if ( ( this.dipDirection = Direction.N ) || ( this.dipDirection = Direction.W ) || ( this.dipDirection = Direction.NW ) ) {
                 // this.strike + this.phi = 2Pi
                 this.phi = 2 * Math.PI - deg2rad( this.strike ) 
     
-            } else if ( ( this.dipDirection = 'S' ) || ( this.dipDirection = 'E' ) || ( this.dipDirection = 'SE' ) ) {
+            } else if ( ( this.dipDirection = Direction.S ) || ( this.dipDirection = Direction.E ) || ( this.dipDirection = Direction.SE ) ) {
                 // this.strike + this.phi = 3Pi
                 this.phi = 3 * Math.PI - deg2rad( this.strike ) 
     
@@ -217,20 +233,20 @@ export class Fault {
                 throw new Error(`dip direction is wrong. Should be N, S, E, W, NW or SE`)
             }    
         } else if ( this.strike === 270 ) {
-            if ( this.dipDirection = 'S' ) {
+            if ( this.dipDirection = Direction.S ) {
                 this.phi = 3 * Math.PI / 2
-            } else if ( this.dipDirection = 'N' ) {
+            } else if ( this.dipDirection = Direction.N ) {
                 this.phi = Math.PI / 2
             } else {
                 throw new Error(`dip direction is wrong. Should be N or S`)
             }
         } else if ( this.strike < 360 ){
     
-            if ( ( this.dipDirection = 'N' ) || ( this.dipDirection = 'E' ) || ( this.dipDirection = 'NE' ) ) {
+            if ( ( this.dipDirection = Direction.N ) || ( this.dipDirection = Direction.E ) || ( this.dipDirection = Direction.NE ) ) {
                 // this.strike + this.phi = 2Pi
                 this.phi = 2 * Math.PI - deg2rad( this.strike ) 
     
-            } else if ( ( this.dipDirection = 'S' ) || ( this.dipDirection = 'W' ) || ( this.dipDirection = 'SW' ) ) {
+            } else if ( ( this.dipDirection = Direction.S ) || ( this.dipDirection = Direction.W ) || ( this.dipDirection = Direction.SW ) ) {
                 // this.strike + this.phi = 3Pi
                 this.phi = 3 * Math.PI - deg2rad( this.strike ) 
     
@@ -239,9 +255,9 @@ export class Fault {
             }
         }
         else if ( this.strike === 360 ) {
-            if ( this.dipDirection = 'E' ) {
+            if ( this.dipDirection = Direction.E ) {
                 this.phi = 0
-            } else if ( this.dipDirection = 'W' ) {
+            } else if ( this.dipDirection = Direction.W ) {
                 this.phi = Math.PI
             } else {
                 throw new Error(`dip direction is wrong. Should be E or W`)
@@ -283,10 +299,10 @@ export class Fault {
     
             if ( this.strike === 0 ) {
                 // phi = PI
-                if (this.strikeDirection === 'N') {
+                if (this.strikeDirection === Direction.N) {
                     this.alphaStriaDeg = 180 - this.rake  
                     this.alphaStria = Math.PI - deg2rad( this.rake )
-                } else if (this.strikeDirection === 'S') {
+                } else if (this.strikeDirection === Direction.S) {
                     this.alphaStriaDeg = this.rake           
                     this.alphaStria = deg2rad( this.rake )
                 } else {
@@ -294,10 +310,10 @@ export class Fault {
                 } 
             } else if ( this.strike < 90 ) {
                 // phi = PI - strike
-                if ( (this.strikeDirection === 'N') || (this.strikeDirection === 'E') || (this.strikeDirection === 'NE') ) {
+                if ( (this.strikeDirection === Direction.N) || (this.strikeDirection === Direction.E) || (this.strikeDirection === Direction.NE) ) {
                     this.alphaStriaDeg = 180 - this.rake  
                     this.alphaStria = Math.PI - deg2rad( this.rake )
-                } else if ( (this.strikeDirection === 'S') || (this.strikeDirection === 'W') || (this.strikeDirection === 'SW') ) {
+                } else if ( (this.strikeDirection === Direction.S) || (this.strikeDirection === Direction.W) || (this.strikeDirection === Direction.SW) ) {
                     this.alphaStriaDeg = this.rake           
                     this.alphaStria = deg2rad( this.rake )
                 } else {
@@ -305,10 +321,10 @@ export class Fault {
                 }    
             } else if ( this.strike === 90 ) {
                 // phi = PI/2
-                if (this.strikeDirection === 'E') {
+                if (this.strikeDirection === Direction.E) {
                     this.alphaStriaDeg = 180 - this.rake  
                     this.alphaStria = Math.PI - deg2rad( this.rake )
-                } else if (this.strikeDirection === 'W') {
+                } else if (this.strikeDirection === Direction.W) {
                     this.alphaStriaDeg = this.rake           
                     this.alphaStria = deg2rad( this.rake )
                 } else {
@@ -316,10 +332,10 @@ export class Fault {
                 } 
             } else if ( this.strike < 180 ) {
                 // phi = PI - strike
-                if ( (this.strikeDirection === 'S') || (this.strikeDirection === 'E') || (this.strikeDirection === 'SE') ) {
+                if ( (this.strikeDirection === Direction.S) || (this.strikeDirection === Direction.E) || (this.strikeDirection === Direction.SE) ) {
                     this.alphaStriaDeg = 180 - this.rake  
                     this.alphaStria = Math.PI - deg2rad( this.rake )
-                } else if ( (this.strikeDirection === 'N') || (this.strikeDirection === 'W') || (this.strikeDirection === 'NW') ) {
+                } else if ( (this.strikeDirection === Direction.N) || (this.strikeDirection === Direction.W) || (this.strikeDirection === Direction.NW) ) {
                     this.alphaStriaDeg = this.rake           
                     this.alphaStria = deg2rad( this.rake )
                 } else {
@@ -327,10 +343,10 @@ export class Fault {
                 }
             } else if ( this.strike === 180 ) {
                 // phi = 0
-                if (this.strikeDirection === 'S') {
+                if (this.strikeDirection === Direction.S) {
                     this.alphaStriaDeg = 180 - this.rake  
                     this.alphaStria = Math.PI - deg2rad( this.rake )
-                } else if (this.strikeDirection === 'N') {
+                } else if (this.strikeDirection === Direction.N) {
                     this.alphaStriaDeg = this.rake           
                     this.alphaStria = deg2rad( this.rake )
                 } else {
@@ -338,10 +354,10 @@ export class Fault {
                 } 
             } else if ( this.strike < 270 ) { 
                 // phi = 3 PI - strike
-                if ( (this.strikeDirection === 'S') || (this.strikeDirection === 'W') || (this.strikeDirection === 'SW') ) {
+                if ( (this.strikeDirection === Direction.S) || (this.strikeDirection === Direction.W) || (this.strikeDirection === Direction.SW) ) {
                     this.alphaStriaDeg = 180 - this.rake  
                     this.alphaStria = Math.PI - deg2rad( this.rake )
-                } else if ( (this.strikeDirection === 'N') || (this.strikeDirection === 'E') || (this.strikeDirection === 'NE') ) {
+                } else if ( (this.strikeDirection === Direction.N) || (this.strikeDirection === Direction.E) || (this.strikeDirection === Direction.NE) ) {
                     this.alphaStriaDeg = this.rake           
                     this.alphaStria = deg2rad( this.rake )
                 } else {
@@ -349,10 +365,10 @@ export class Fault {
                 }
             } else if ( this.strike === 270 ) {
                 // phi = 3 PI / 2
-                if (this.strikeDirection === 'W') {
+                if (this.strikeDirection === Direction.W) {
                     this.alphaStriaDeg = 180 - this.rake  
                     this.alphaStria = Math.PI - deg2rad( this.rake )
-                } else if (this.strikeDirection === 'E') {
+                } else if (this.strikeDirection === Direction.E) {
                     this.alphaStriaDeg = this.rake           
                     this.alphaStria = deg2rad( this.rake )
                 } else {
@@ -360,10 +376,10 @@ export class Fault {
                 } 
             } else if ( this.strike < 360 ){
                 // phi = 3 PI - strike
-                if ( (this.strikeDirection === 'N') || (this.strikeDirection === 'W') || (this.strikeDirection === 'NW') ) {
+                if ( (this.strikeDirection === Direction.N) || (this.strikeDirection === Direction.W) || (this.strikeDirection === Direction.NW) ) {
                     this.alphaStriaDeg = 180 - this.rake  
                     this.alphaStria = Math.PI - deg2rad( this.rake )
-                } else if ( (this.strikeDirection === 'S') || (this.strikeDirection === 'E') || (this.strikeDirection === 'SE') ) {
+                } else if ( (this.strikeDirection === Direction.S) || (this.strikeDirection === Direction.E) || (this.strikeDirection === Direction.SE) ) {
                     this.alphaStriaDeg = this.rake           
                     this.alphaStria = deg2rad( this.rake )
                 } else {
@@ -372,10 +388,10 @@ export class Fault {
             } else if ( this.strike === 360 ) {
                 // This case should not occur since in principle strike < 360
                 // phi = PI
-                if (this.strikeDirection === 'N') {
+                if (this.strikeDirection === Direction.N) {
                     this.alphaStriaDeg = 180 - this.rake  
                     this.alphaStria = Math.PI - deg2rad( this.rake )
-                } else if (this.strikeDirection === 'S') {
+                } else if (this.strikeDirection === Direction.S) {
                     this.alphaStriaDeg = this.rake           
                     this.alphaStria = deg2rad( this.rake )
                 } else {
@@ -388,21 +404,21 @@ export class Fault {
         } else {      // The fault plane is not vertical and the dip direction is defined
     
             if ( this.strike === 0 ) {
-                if ( this.dipDirection = 'E' ) {    
-                    if (this.strikeDirection === 'N') {
+                if ( this.dipDirection = Direction.E ) {    
+                    if (this.strikeDirection === Direction.N) {
                         this.alphaStriaDeg = this.rake          // For testing the sense of mouvement of faults 
                         this.alphaStria = deg2rad( this.rake )
-                    } else if (this.strikeDirection === 'S') {
+                    } else if (this.strikeDirection === Direction.S) {
                         this.alphaStriaDeg = 180 - this.rake    // For testing the sense of mouvement of faults
                         this.alphaStria = Math.PI - deg2rad( this.rake )
                     } else {
                         throw new Error(`Strike direction for measuring the rake is wrong. Should be N or S`)
                     }
-                } else if ( this.dipDirection = 'W' ) {
-                    if (this.strikeDirection === 'N') {
+                } else if ( this.dipDirection = Direction.W ) {
+                    if (this.strikeDirection === Direction.N) {
                        this.alphaStriaDeg = 180 - this.rake  
                        this.alphaStria = Math.PI - deg2rad( this.rake )
-                    } else if (this.strikeDirection === 'S') {
+                    } else if (this.strikeDirection === Direction.S) {
                        this.alphaStriaDeg = this.rake           
                        this.alphaStria = deg2rad( this.rake )
                     } else {
@@ -413,21 +429,21 @@ export class Fault {
                 }
             } else if ( this.strike < 90 ){
     
-                if ( ( this.dipDirection = 'S' ) || ( this.dipDirection = 'E' ) || ( this.dipDirection = 'SE' ) ) {
-                    if ( (this.strikeDirection === 'N') || (this.strikeDirection === 'E') || (this.strikeDirection === 'NE') ) {
+                if ( ( this.dipDirection = Direction.S ) || ( this.dipDirection = Direction.E ) || ( this.dipDirection = Direction.SE ) ) {
+                    if ( (this.strikeDirection === Direction.N) || (this.strikeDirection === Direction.E) || (this.strikeDirection === Direction.NE) ) {
                         this.alphaStriaDeg = this.rake           
                         this.alphaStria = deg2rad( this.rake )
-                    } else if ( (this.strikeDirection === 'S') || (this.strikeDirection === 'W') || (this.strikeDirection === 'SW') ) {
+                    } else if ( (this.strikeDirection === Direction.S) || (this.strikeDirection === Direction.W) || (this.strikeDirection === Direction.SW) ) {
                         this.alphaStriaDeg = 180 - this.rake  
                         this.alphaStria = Math.PI - deg2rad( this.rake )
                     } else {
                         throw new Error(`Strike direction for measuring the rake is wrong. Should be N, S, E, W, NE or SW `)
                     }
-                } else if ( ( this.dipDirection = 'N' ) || ( this.dipDirection = 'W' ) || ( this.dipDirection = 'NW' ) ) {
-                    if ( (this.strikeDirection === 'N') || (this.strikeDirection === 'E') || (this.strikeDirection === 'NE') ) {
+                } else if ( ( this.dipDirection = Direction.N ) || ( this.dipDirection = Direction.W ) || ( this.dipDirection = Direction.NW ) ) {
+                    if ( (this.strikeDirection === Direction.N) || (this.strikeDirection === Direction.E) || (this.strikeDirection === Direction.NE) ) {
                         this.alphaStriaDeg = 180 - this.rake  
                         this.alphaStria = Math.PI - deg2rad( this.rake )
-                    } else if ( (this.strikeDirection === 'S') || (this.strikeDirection === 'W') || (this.strikeDirection === 'SW') ) {
+                    } else if ( (this.strikeDirection === Direction.S) || (this.strikeDirection === Direction.W) || (this.strikeDirection === Direction.SW) ) {
                         this.alphaStriaDeg = this.rake           
                         this.alphaStria = deg2rad( this.rake )
                     } else {
@@ -438,21 +454,21 @@ export class Fault {
                 }    
             } else if ( this.strike === 90 ) {
     
-                if ( this.dipDirection = 'S' ) {
-                    if (this.strikeDirection === 'E') {
+                if ( this.dipDirection = Direction.S ) {
+                    if (this.strikeDirection === Direction.E) {
                         this.alphaStriaDeg = this.rake           
                         this.alphaStria = deg2rad( this.rake )
-                    } else if (this.strikeDirection === 'W') {
+                    } else if (this.strikeDirection === Direction.W) {
                         this.alphaStriaDeg = 180 - this.rake  
                         this.alphaStria = Math.PI - deg2rad( this.rake )
                     } else {
                         throw new Error(`Strike direction for measuring the rake is wrong. Should be E or W`)
                     }
-                } else if ( this.dipDirection = 'N' ) {
-                    if (this.strikeDirection === 'E') {
+                } else if ( this.dipDirection = Direction.N ) {
+                    if (this.strikeDirection === Direction.E) {
                         this.alphaStriaDeg = 180 - this.rake  
                         this.alphaStria = Math.PI - deg2rad( this.rake )
-                    } else if (this.strikeDirection === 'W') {
+                    } else if (this.strikeDirection === Direction.W) {
                         this.alphaStriaDeg = this.rake           
                         this.alphaStria = deg2rad( this.rake )
                     } else {
@@ -463,21 +479,21 @@ export class Fault {
                 }  
             } else if ( this.strike < 180 ){
     
-                if ( ( this.dipDirection = 'S' ) || ( this.dipDirection = 'W' ) || ( this.dipDirection = 'SW' ) ) {
-                    if ( (this.strikeDirection === 'S') || (this.strikeDirection === 'E') || (this.strikeDirection === 'SE') ) {
+                if ( ( this.dipDirection = Direction.S ) || ( this.dipDirection = Direction.W ) || ( this.dipDirection = Direction.SW ) ) {
+                    if ( (this.strikeDirection === Direction.S) || (this.strikeDirection === Direction.E) || (this.strikeDirection === Direction.SE) ) {
                         this.alphaStriaDeg = this.rake           
                         this.alphaStria = deg2rad( this.rake )
-                    } else if ( (this.strikeDirection === 'N') || (this.strikeDirection === 'W') || (this.strikeDirection === 'NW') ) {
+                    } else if ( (this.strikeDirection === Direction.N) || (this.strikeDirection === Direction.W) || (this.strikeDirection === Direction.NW) ) {
                         this.alphaStriaDeg = 180 - this.rake  
                         this.alphaStria = Math.PI - deg2rad( this.rake )
                     } else {
                         throw new Error(`Strike direction for measuring the rake is wrong. Should be N, S, E, W, SE or NW `)
                     }
-                } else if ( ( this.dipDirection = 'N' ) || ( this.dipDirection = 'E' ) || ( this.dipDirection = 'NE' ) ) {
-                    if ( (this.strikeDirection === 'S') || (this.strikeDirection === 'E') || (this.strikeDirection === 'SE') ) {
+                } else if ( ( this.dipDirection = Direction.N ) || ( this.dipDirection = Direction.E ) || ( this.dipDirection = Direction.NE ) ) {
+                    if ( (this.strikeDirection === Direction.S) || (this.strikeDirection === Direction.E) || (this.strikeDirection === Direction.SE) ) {
                         this.alphaStriaDeg = 180 - this.rake  
                         this.alphaStria = Math.PI - deg2rad( this.rake )
-                    } else if ( (this.strikeDirection === 'N') || (this.strikeDirection === 'W') || (this.strikeDirection === 'NW') ) {
+                    } else if ( (this.strikeDirection === Direction.N) || (this.strikeDirection === Direction.W) || (this.strikeDirection === Direction.NW) ) {
                         this.alphaStriaDeg = this.rake           
                         this.alphaStria = deg2rad( this.rake )
                     } else {
@@ -488,21 +504,21 @@ export class Fault {
                 }    
             } else if ( this.strike === 180 ) {
     
-                if ( this.dipDirection = 'W' ) {
-                    if (this.strikeDirection === 'S') {
+                if ( this.dipDirection = Direction.W ) {
+                    if (this.strikeDirection === Direction.S) {
                         this.alphaStriaDeg = this.rake           
                         this.alphaStria = deg2rad( this.rake )
-                    } else if (this.strikeDirection === 'N') {
+                    } else if (this.strikeDirection === Direction.N) {
                         this.alphaStriaDeg = 180 - this.rake  
                         this.alphaStria = Math.PI - deg2rad( this.rake )
                     } else {
                         throw new Error(`Strike direction for measuring the rake is wrong. Should be N or S`)
                     }
-                } else if ( this.dipDirection = 'E' ) {
-                    if (this.strikeDirection === 'S') {
+                } else if ( this.dipDirection = Direction.E ) {
+                    if (this.strikeDirection === Direction.S) {
                         this.alphaStriaDeg = 180 - this.rake  
                         this.alphaStria = Math.PI - deg2rad( this.rake )
-                    } else if (this.strikeDirection === 'N') {
+                    } else if (this.strikeDirection === Direction.N) {
                         this.alphaStriaDeg = this.rake           
                         this.alphaStria = deg2rad( this.rake )
                     } else {
@@ -513,21 +529,21 @@ export class Fault {
                 }  
             } else if ( this.strike < 270 ){
     
-                if ( ( this.dipDirection = 'N' ) || ( this.dipDirection = 'W' ) || ( this.dipDirection = 'NW' ) ) {
-                    if ( (this.strikeDirection === 'S') || (this.strikeDirection === 'W') || (this.strikeDirection === 'SW') ) {
+                if ( ( this.dipDirection = Direction.N ) || ( this.dipDirection = Direction.W ) || ( this.dipDirection = Direction.NW ) ) {
+                    if ( (this.strikeDirection === Direction.S) || (this.strikeDirection === Direction.W) || (this.strikeDirection === Direction.SW) ) {
                         this.alphaStriaDeg = this.rake           
                         this.alphaStria = deg2rad( this.rake )
-                    } else if ( (this.strikeDirection === 'N') || (this.strikeDirection === 'E') || (this.strikeDirection === 'NE') ) {
+                    } else if ( (this.strikeDirection === Direction.N) || (this.strikeDirection === Direction.E) || (this.strikeDirection === Direction.NE) ) {
                         this.alphaStriaDeg = 180 - this.rake  
                         this.alphaStria = Math.PI - deg2rad( this.rake )
                     } else {
                         throw new Error(`Strike direction for measuring the rake is wrong. Should be N, S, E, W, SW or NE `)
                     }
-                } else if ( ( this.dipDirection = 'S' ) || ( this.dipDirection = 'E' ) || ( this.dipDirection = 'SE' ) ) {
-                    if ( (this.strikeDirection === 'S') || (this.strikeDirection === 'W') || (this.strikeDirection === 'SW') ) {
+                } else if ( ( this.dipDirection = Direction.S ) || ( this.dipDirection = Direction.E ) || ( this.dipDirection = Direction.SE ) ) {
+                    if ( (this.strikeDirection === Direction.S) || (this.strikeDirection === Direction.W) || (this.strikeDirection === Direction.SW) ) {
                         this.alphaStriaDeg = 180 - this.rake  
                         this.alphaStria = Math.PI - deg2rad( this.rake )
-                    } else if ( (this.strikeDirection === 'N') || (this.strikeDirection === 'E') || (this.strikeDirection === 'NE') ) {
+                    } else if ( (this.strikeDirection === Direction.N) || (this.strikeDirection === Direction.E) || (this.strikeDirection === Direction.NE) ) {
                         this.alphaStriaDeg = this.rake           
                         this.alphaStria = deg2rad( this.rake )
                     } else {
@@ -538,21 +554,21 @@ export class Fault {
                 }    
             } else if ( this.strike === 270 ) {
     
-                if ( this.dipDirection = 'N' ) {
-                    if (this.strikeDirection === 'W') {
+                if ( this.dipDirection = Direction.N ) {
+                    if (this.strikeDirection === Direction.W) {
                         this.alphaStriaDeg = this.rake           
                         this.alphaStria = deg2rad( this.rake )
-                    } else if (this.strikeDirection === 'E') {
+                    } else if (this.strikeDirection === Direction.E) {
                         this.alphaStriaDeg = 180 - this.rake  
                         this.alphaStria = Math.PI - deg2rad( this.rake )
                     } else {
                         throw new Error(`Strike direction for measuring the rake is wrong. Should be E or W`)
                     }
-                } else if ( this.dipDirection = 'S' ) {
-                    if (this.strikeDirection === 'W') {
+                } else if ( this.dipDirection = Direction.S ) {
+                    if (this.strikeDirection === Direction.W) {
                         this.alphaStriaDeg = 180 - this.rake  
                         this.alphaStria = Math.PI - deg2rad( this.rake )
-                    } else if (this.strikeDirection === 'E') {
+                    } else if (this.strikeDirection === Direction.E) {
                         this.alphaStriaDeg = this.rake           
                         this.alphaStria = deg2rad( this.rake )
                     } else {
@@ -563,21 +579,21 @@ export class Fault {
                 }  
             } else if ( this.strike < 360 ){
     
-                if ( ( this.dipDirection = 'N' ) || ( this.dipDirection = 'E' ) || ( this.dipDirection = 'NE' ) ) {
-                    if ( (this.strikeDirection === 'N') || (this.strikeDirection === 'W') || (this.strikeDirection === 'NW') ) {
+                if ( ( this.dipDirection = Direction.N ) || ( this.dipDirection = Direction.E ) || ( this.dipDirection = Direction.NE ) ) {
+                    if ( (this.strikeDirection === Direction.N) || (this.strikeDirection === Direction.W) || (this.strikeDirection === Direction.NW) ) {
                         this.alphaStriaDeg = this.rake           
                         this.alphaStria = deg2rad( this.rake )
-                    } else if ( (this.strikeDirection === 'S') || (this.strikeDirection === 'E') || (this.strikeDirection === 'SE') ) {
+                    } else if ( (this.strikeDirection === Direction.S) || (this.strikeDirection === Direction.E) || (this.strikeDirection === Direction.SE) ) {
                         this.alphaStriaDeg = 180 - this.rake  
                         this.alphaStria = Math.PI - deg2rad( this.rake )
                     } else {
                         throw new Error(`Strike direction for measuring the rake is wrong. Should be N, S, E, W, NW or SE `)
                     }
-                } else if ( ( this.dipDirection = 'S' ) || ( this.dipDirection = 'W' ) || ( this.dipDirection = 'SW' ) ) {
-                    if ( (this.strikeDirection === 'N') || (this.strikeDirection === 'W') || (this.strikeDirection === 'NW') ) {
+                } else if ( ( this.dipDirection = Direction.S ) || ( this.dipDirection = Direction.W ) || ( this.dipDirection = Direction.SW ) ) {
+                    if ( (this.strikeDirection === Direction.N) || (this.strikeDirection === Direction.W) || (this.strikeDirection === Direction.NW) ) {
                         this.alphaStriaDeg = 180 - this.rake  
                         this.alphaStria = Math.PI - deg2rad( this.rake )
-                    } else if ( (this.strikeDirection === 'S') || (this.strikeDirection === 'E') || (this.strikeDirection === 'SE') ) {
+                    } else if ( (this.strikeDirection === Direction.S) || (this.strikeDirection === Direction.E) || (this.strikeDirection === Direction.SE) ) {
                         this.alphaStriaDeg = this.rake           
                         this.alphaStria = deg2rad( this.rake )
                     } else {
@@ -588,21 +604,21 @@ export class Fault {
                 }  
             } else if ( this.strike === 360 ) {
                     // This case should not occur since in principle strike < 360
-                if ( this.dipDirection = 'E' ) {
-                    if (this.strikeDirection === 'N') {
+                if ( this.dipDirection = Direction.E ) {
+                    if (this.strikeDirection === Direction.N) {
                         this.alphaStriaDeg = this.rake           
                         this.alphaStria = deg2rad( this.rake )
-                    } else if (this.strikeDirection === 'S') {
+                    } else if (this.strikeDirection === Direction.S) {
                         this.alphaStriaDeg = 180 - this.rake  
                         this.alphaStria = Math.PI - deg2rad( this.rake )
                     } else {
                         throw new Error(`Strike direction for measuring the rake is wrong. Should be N or S`)
                     }
-                } else if ( this.dipDirection = 'W' ) {
-                    if (this.strikeDirection === 'N') {
+                } else if ( this.dipDirection = Direction.W ) {
+                    if (this.strikeDirection === Direction.N) {
                         this.alphaStriaDeg = 180 - this.rake  
                         this.alphaStria = Math.PI - deg2rad( this.rake )
-                    } else if (this.strikeDirection === 'S') {
+                    } else if (this.strikeDirection === Direction.S) {
                         this.alphaStriaDeg = this.rake           
                         this.alphaStria = deg2rad( this.rake )
                     } else {
@@ -728,82 +744,82 @@ export class Fault {
     
         if ( this.strike === 0 ) {
     
-            if ( this.upliftedBlock = 'W' ) { 
+            if ( this.upliftedBlock === Direction.W ) { 
                 this.alphaStriaDeg = 270
                 this.alphaStria = 3 * Math.PI / 2                     
-            } else if (this.upliftedBlock !== 'E') {
+            } else if (this.upliftedBlock !== Direction.E) {
                 throw new Error(`The orientation of the uplifted block is wrong. Should be E or W`)
             }
             
         } else if ( this.strike < 90 ){
     
-            if ( ( this.upliftedBlock = 'N' ) || ( this.upliftedBlock = 'W' ) || ( this.upliftedBlock = 'NW' ) ) {
+            if ( ( this.upliftedBlock === Direction.N ) || ( this.upliftedBlock === Direction.W ) || ( this.upliftedBlock === Direction.NW ) ) {
                 this.alphaStriaDeg = 270
                 this.alphaStria = 3 * Math.PI / 2        
-            } else if ( ( this.upliftedBlock !== 'S' ) && ( this.upliftedBlock !== 'E' ) && ( this.upliftedBlock !== 'SE' ) ) {
+            } else if ( ( this.upliftedBlock !== Direction.S ) && ( this.upliftedBlock !== Direction.E ) && ( this.upliftedBlock !== Direction.SE ) ) {
                 throw new Error(`The orientation of the uplifted block is wrong. Should be N, S, E, W, SE or NW`)
             }    
     
         } else if ( this.strike === 90 ) {
     
-            if ( this.upliftedBlock = 'N' ) { 
+            if ( this.upliftedBlock === Direction.N ) { 
                 this.alphaStriaDeg = 270
                 this.alphaStria = 3 * Math.PI / 2                     
-            } else if (this.upliftedBlock !== 'S') {
+            } else if (this.upliftedBlock !== Direction.S) {
                 throw new Error(`The orientation of the uplifted block is wrong. Should be N or S`)
             }
     
         } else if ( this.strike < 180 ){
     
-            if ( ( this.upliftedBlock = 'N' ) || ( this.upliftedBlock = 'E' ) || ( this.upliftedBlock = 'NE' ) ) {
+            if ( ( this.upliftedBlock === Direction.N ) || ( this.upliftedBlock === Direction.E ) || ( this.upliftedBlock === Direction.NE ) ) {
                 this.alphaStriaDeg = 270
                 this.alphaStria = 3 * Math.PI / 2        
-            } else if ( ( this.upliftedBlock !== 'S' ) && ( this.upliftedBlock !== 'W' ) && ( this.upliftedBlock !== 'SW' ) ) {
+            } else if ( ( this.upliftedBlock !== Direction.S ) && ( this.upliftedBlock !== Direction.W ) && ( this.upliftedBlock !== Direction.SW ) ) {
                 throw new Error(`The orientation of the uplifted block is wrong. Should be N, S, E, W, NE or SW`)
             }     
             
         } else if ( this.strike === 180 ) {
     
-            if ( this.upliftedBlock = 'E' ) { 
+            if ( this.upliftedBlock === Direction.E ) { 
                 this.alphaStriaDeg = 270
                 this.alphaStria = 3 * Math.PI / 2                     
-            } else if (this.upliftedBlock !== 'W') {
+            } else if (this.upliftedBlock !== Direction.W) {
                 throw new Error(`The orientation of the uplifted block is wrong. Should be E or W`)
             }
     
         } else if ( this.strike < 270 ){
     
-            if ( ( this.upliftedBlock = 'S' ) || ( this.upliftedBlock = 'E' ) || ( this.upliftedBlock = 'SE' ) ) {
+            if ( ( this.upliftedBlock === Direction.S ) || ( this.upliftedBlock === Direction.E ) || ( this.upliftedBlock === Direction.SE ) ) {
                 this.alphaStriaDeg = 270
                 this.alphaStria = 3 * Math.PI / 2        
-            } else if ( ( this.upliftedBlock !== 'N' ) && ( this.upliftedBlock !== 'W' ) && ( this.upliftedBlock !== 'NW' ) ) {
+            } else if ( ( this.upliftedBlock !== Direction.N ) && ( this.upliftedBlock !== Direction.W ) && ( this.upliftedBlock !== Direction.NW ) ) {
                 throw new Error(`The orientation of the uplifted block is wrong. Should be N, S, E, W, SE or NW`)
             }     
     
         } else if ( this.strike === 270 ) {
     
-            if ( this.upliftedBlock = 'S' ) { 
+            if ( this.upliftedBlock === Direction.S ) { 
                 this.alphaStriaDeg = 270
                 this.alphaStria = 3 * Math.PI / 2                     
-            } else if (this.upliftedBlock !== 'N') {
+            } else if (this.upliftedBlock !== Direction.N) {
                 throw new Error(`The orientation of the uplifted block is wrong. Should be N or S`)
             }
          
         } else if ( this.strike < 360 ){
     
-            if ( ( this.upliftedBlock = 'S' ) || ( this.upliftedBlock = 'W' ) || ( this.upliftedBlock = 'SW' ) ) {
+            if ( ( this.upliftedBlock === Direction.S ) || ( this.upliftedBlock === Direction.W ) || ( this.upliftedBlock === Direction.SW ) ) {
                 this.alphaStriaDeg = 270
                 this.alphaStria = 3 * Math.PI / 2        
-            } else if ( ( this.upliftedBlock !== 'N' ) && ( this.upliftedBlock !== 'E' ) && ( this.upliftedBlock !== 'NE' ) ) {
+            } else if ( ( this.upliftedBlock !== Direction.N ) && ( this.upliftedBlock !== Direction.E ) && ( this.upliftedBlock !== Direction.NE ) ) {
                 throw new Error(`The orientation of the uplifted block is wrong. Should be N, S, E, W, NE or SW`)
             }     
                     
         } else if ( this.strike === 360 ) {
           
-            if ( this.upliftedBlock = 'W' ) { 
+            if ( this.upliftedBlock === Direction.W ) { 
                 this.alphaStriaDeg = 270
                 this.alphaStria = 3 * Math.PI / 2                     
-            } else if (this.upliftedBlock !== 'E') {
+            } else if (this.upliftedBlock !== Direction.E) {
                 throw new Error(`The orientation of the uplifted block is wrong. Should be E or W`)
             }
             
@@ -811,7 +827,42 @@ export class Fault {
             throw new Error(`fault strike is out of the expected interval [0,360)`)
         }
     }
+
+    private faultNormalVector(): void {
+    /** 
+     * Define unit vector normal to the fault plane in the upper hemisphere (pointing upward) from angles in spherical coordinates.
+     * The normal vector is constnat for each fault plane and is defined in the geographic reference system: S = (X,Y,Z)
+    */
+        this.normal[0] = Math.sin( this.phi) * Math.cos( this.theta)
+        this.normal[1] = Math.sin( this.phi) * Math.sin( this.theta)
+        this.normal[2] = Math.cos( this.phi)
+    }
+
+    private faultNormalVectorSp(): void {
+    /**
+     *  (phiSp,thetaSp) : spherical coordinate angles defining the unit vector perpendicular to the fault plane (pointing upward in system S)
+     *               in the stress tensor reference system: S' = (X,Y,Z)
+     *  These angles are recalculated from the new stress tensors
+     */
+
+
+
+
+    }
+
+    /**
+     * Rotate the tensor about an angle...
+     * @param rotAx_phi 
+     */
+    vector_rotation(rotAx_phi: number): void {
+        // this.x = Math.sin( rotAx_phi);
+    }
 }
+
+
+ 
+
+ 
 
 /**
  * There is one particular case in which the sens of mouvement has to be defined with a different parameter:
@@ -820,7 +871,7 @@ export class Fault {
  *      upLiftedBlock: (N, E, S, W) or a combination of two directions (NE, SE, SW, NW).
  */
 export function createUpLiftedBlock() {
-    const f = new Fault({strike: 0, dipDirection: 'E', dip: 90}) // TODO: params in ctor
+    const f = new Fault({strike: 0, dipDirection: Direction.E, dip: 90}) // TODO: params in ctor
     f.setStriation({rake: 90, sensMouv: SensOfMovement.UKN})
     return f
 }

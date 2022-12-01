@@ -49,7 +49,7 @@ export class EquipotentialCurve implements GenericCurve {
         // alfa_n0 = angle (in radians) between line segment (sigma_3,tau_n0) in circle 3-1 and the horizontal axis (sigma_3, sigma_1) :
         const alfa_0 = Math.atan( tau_0 / (sigma_n - sigma_3) )
 
- /*        if ( sigma_2 == sigma_3) {
+        /* if ( sigma_2 == sigma_3) {
             // Particular Case 1: revolution stress tensor around sigma_1
             // Equipotential curve is a circle sweeping at an angle alfa_n0 around sigma_1
             arcCircle(r: this.r, 'sigma_1', alfa_0 )

@@ -1,4 +1,4 @@
-import { MohrCoulombCurve, Vector } from "../lib";
+import { MohrCoulombCurve } from "../lib";
 
 test('test stress 1 item', () => {
     const mc = new MohrCoulombCurve([-1, 0, -0.5])
