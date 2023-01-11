@@ -1,6 +1,7 @@
 
 export type Point2D = [number, number]
 export type Point3D = [number, number, number]
+export type Vector3 = [number, number, number]
 
 export class SphericalCoords {
     private theta_ = 0
@@ -78,8 +79,42 @@ export class PoleCoords {
     }
 }
 
+export class StressTensor {
+    stressTensor_: Matrix3x3
+    private rotationTensorR_: Matrix3x3
+    private rotationTensorRT_: Matrix3x3
+    private polarCoordsS1_: PoleCoords
+    private polarCoordsS3_: PoleCoords
+    private stressRatio_: number
+
+
+    constructor(
+        stressTensor_: Matrix3x3,
+        rotationTensorR_: Matrix3x3,
+        rotationTensorRT_: Matrix3x3,
+        polarCoordsS1_: PoleCoords,
+        polarCoordsS3_: PoleCoords,
+        stressRatio_: number)
+        {
+        // this.stressTensor_ = 
+        }
+    
+    get stressTensor(): Matrix3x3 {
+        return this.stressTensor_
+    }
+    set stressTensor(value: Matrix3x3) {
+        this.stressTensor_ = value
+    }
+
+}
+
+
 export function newPoint3D() {
-    return [0,0,0]
+    return [0,0,0] as Point3D
+}
+
+export function newVector3D() {
+    return [0,0,0] as Vector3
 }
 
 export type Matrix3x3 = [[number,number,number], [number,number,number], [number,number,number]]
@@ -88,13 +123,13 @@ export function newMatrix3x3(): Matrix3x3 {
     return [[0,0,0], [0,0,0], [0,0,0]] as Matrix3x3
 }
 
-// class Matrix3x3 {
-//     private v = [[0,0,0], [0,0,0], [0,0,0]]
-    
-//     set(i: number, j: number, value: number) {
-//         this.v[i][j] = value
-//     }
-// }
+export function cloneMatrix3x3(m: Matrix3x3): Matrix3x3 {
+    return [ [...m[0]], [...m[1]], [...m[2]] ]
+}
+
+export function newMatrix3x3Identity(): Matrix3x3 {
+    return [[1,0,0], [0,1,0], [0,0,1]] as Matrix3x3
+}
 
 /**
  * Usage:

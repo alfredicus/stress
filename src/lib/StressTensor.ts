@@ -1,10 +1,10 @@
-import { Matrix3x3, newMatrix3x3, PoleCoords, SphericalCoords } from "./types"
-import { lineSphericalCoords, trend2phi, rad2deg } from "./utils"
+import { Matrix3x3, newMatrix3x3, Point3D, PoleCoords, SphericalCoords, Vector3 } from "./types"
+import { lineSphericalCoords, trend2phi, rad2deg, multiplyTensors, stressTensorPrincipalAxes, transposeTensor } from "./utils"
 
 export class StressTensor {
     /**
-     * The new stress tensor is defined in a new reference sytem S' = (X',Y',Z') = (s1,s3,s2)
-     * Sigma 1 and sigma 3 axes can be defined intercatively in the sphere (prefered solution) or chosen in a predefined range.
+     * The new stress tensor is defined in a new reference sytem S' = (X',Y',Z') = (sigma 1, sigma 3, sigma 2)
+     * Sigma 1 and sigma 3 axes can be defined interactively in the sphere (prefered solution) or chosen in a predefined range.
      * 
      * The stress axis Sigma_1 is defined by two angles in PoleCoords: trend and plunge.
      *      trend  = azimuth of sigma 1 in interval [0, 360), measured clockwise from the North
@@ -26,17 +26,23 @@ export class StressTensor {
     //      The trend and plunge of the MPS are defined by the user
     //      The trend of the SPS is defined by the user while the plunge is calculated from the 3 selected angles
     //      The SPS is located in the plane perpendicular to the MPS.
-    private masterStress:       string
+    private masterStress: string
+    private lambda: [number, number, number] = [0,0,0]
+
+    private Rrot_: Matrix3x3 = newMatrix3x3()
 
     constructor(
-        {trendS1, plungeS1, trendS3, plungeS3, masterStress}:
-        {trendS1: number, plungeS1: number, trendS3: number, plungeS3: number, masterStress: string})
+        {trendS1, plungeS1, trendS3, plungeS3, masterStress, lambda}:
+        {trendS1: number, plungeS1: number, trendS3: number, plungeS3: number, masterStress: string, lambda: [number, number, number]})
     {
         this.poleS1.plunge = plungeS1
         this.poleS3.plunge = plungeS3
         this.poleS1.trend  = trendS1
         this.poleS3.trend  = trendS3
-
+        this.lambda[0]     = lambda[0]
+        this.lambda[1]     = lambda[1]
+        this.lambda[2]     = lambda[2]
+        
         this.changeMasterStress(masterStress)
 
         // Perfom the computations...
@@ -71,6 +77,21 @@ export class StressTensor {
         else {
             return this.poleS1.plunge
         }
+    }
+
+    /**
+     * Example:
+     * ```ts
+     * const s = new StressTensor({trendS1, plungeS1, trendS3, plungeS3, masterStress, lambda})
+     * const r = s.Rrot
+     * ```
+     */
+    get Rrot(): Matrix3x3 {
+        return this.Rrot_
+    }
+
+    get RTrot(): Matrix3x3 {
+        return transposeTensor(this.Rrot_)
     }
 
     masterSlave() {
@@ -117,21 +138,26 @@ export class StressTensor {
             let phi_Y_NormalPlane = thetaMaster
             // phi_NP_Slave = azimuthal angle between phi_NormalPlane and phiSlave
             let phi_NP_Slave = phiSlave - phi_NormalPlane
+            // Analytic equation relating angles in spherical coords 
             thetaSlave = Math.atan( 1 / ( Math.sin( phi_NP_Slave ) * Math.tan( phi_Y_NormalPlane ) ) )
-
+            if ( thetaSlave < 0 ) {
+                thetaSlave += Math.PI
+            }
         } else if ( thetaMaster > Math.PI / 2 ){
             // The master stress axis is in the lower hemisphere
             let phi_NormalPlane = phiMaster - Math.PI / 2
             if ( phi_NormalPlane < 0 ) {
                 phi_NormalPlane += 2 * Math.PI
-                let phi_NP_Slave = phiSlave - phi_NormalPlane
             }
             // phi_Y_NormalPlane = inclination angle of the normal fault plane (0, PI/2 )()
             let phi_Y_NormalPlane = Math.PI - thetaMaster
             // phi_NP_Slave = azimuthal angle between phi_NormalPlane and phiSlave
             let phi_NP_Slave = phiSlave - phi_NormalPlane
+            // Analytic equation relating angles in spherical coords 
             thetaSlave = Math.atan( 1 / ( Math.sin( phi_NP_Slave ) * Math.tan( phi_Y_NormalPlane ) ) )
-
+            if ( thetaSlave < 0 ) {
+                thetaSlave += Math.PI
+            }
         } else if ( thetaMaster === 0 ){  
             // The master stress axis is vertical
 
@@ -139,7 +165,6 @@ export class StressTensor {
             // The master stress axis is horizontal
 
         }
-
         return thetaSlave
     }
 
@@ -175,15 +200,42 @@ export class StressTensor {
         //      V = RTrot V',  where V and V' are the same vector defined in reference frames S and S', respectively
 
         // The rotation tensor RTrot is defined by the transposed of rotation tensor Rrot since reference systems S and S' are both orthonormal
-        const RTrot: Matrix3x3 = newMatrix3x3()
+        let RTrot: Matrix3x3 = newMatrix3x3()
+
+        RTrot = transposeTensor(Rrot)
 
         for (let i = 0; i < 3; i++) {
             for (let j = 0; i < 3; j++) {
                 RTrot[j][i] = Rrot [i][j]
             }
         }
-    
     } 
+
+    private stressTensorS(): Matrix3x3 {
+        // Calculate the stress tensor ST in reference frame S from the stress tensor in reference frame S':
+        //      ST = RTrot STP Rrot
+        //
+        // where
+        //
+        //      S' = (X',Y',Z') is the principal stress reference frame, parallel to (sigma_1, sigma_3, sigma_2);
+        //      S =  (X, Y, Z ) is the geographic reference frame  oriented in (East, North, Up) directions.
+        //      STP = Stress tensor in the principal stress reference frame.
+
+        let STP: Matrix3x3 = newMatrix3x3()
+        STP = stressTensorPrincipalAxes( this.lambda.map( v => -v) as Vector3 )
+    
+        let T1 : Matrix3x3 = newMatrix3x3()
+        T1 = multiplyTensors({A: transposeTensor(this.Rrot_), B: STP})
+
+        let ST : Matrix3x3 = newMatrix3x3()
+        return multiplyTensors({A: T1, B: this.Rrot_})
+    }
+    
+
+
+
+
+
 
 
     // This function calculates the azimuth phi such that the right-handed local coordinate system in polar coordinates is located in the upper hemisphere.

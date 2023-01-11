@@ -1,7 +1,7 @@
 // Calculate the stress components of fault planes
 
-import { Point3D } from "./types"
-import { deg2rad } from "./utils"
+import { Matrix3x3, newMatrix3x3, Point3D, SphericalCoords } from "./types"
+import { deg2rad, tensor_x_Vector, spherical2unitVectorCartesian } from "./utils"
 
 
 /**
@@ -10,7 +10,7 @@ import { deg2rad } from "./utils"
  * const sens = SensOfMovement.LL
  * ```
  */
-export enum SensOfMovement {
+export const enum SensOfMovement {
     N = 1,
     I,
     RL,
@@ -22,7 +22,7 @@ export enum SensOfMovement {
     UKN
 }
 
-export enum Direction {
+export const enum Direction {
     E, // 0
     W, // 1
     N, // 2
@@ -46,10 +46,21 @@ export enum Direction {
  */
 export class Fault {
 
-    constructor({strike, dipDirection, dip}:{strike: number, dipDirection: Direction, dip: number}) {
+    constructor({
+        strike, 
+        dipDirection, 
+        dip,
+        sensOfMovement
+    }:{
+        strike: number, 
+        dipDirection: Direction, 
+        dip: number,
+        sensOfMovement: SensOfMovement})
+    {
         this.strike = strike
         this.dipDirection = dipDirection
         this.dip = dip
+        this.sensMouv = sensOfMovement
         // Perfom the computations...
     }
 
@@ -70,9 +81,10 @@ export class Fault {
         this.striationTrend = striationTrend
         this.sensMouv = sensMouv
         this.faultSphericalCoords()
-    }
+        this.faultStriationAngle_A()
+        this.faultStriationAngle_B()
 
-    // --------------------------------------
+    }
 
     // Each fault is defined by a set of parameters as follows:
     //      The fault plane orientation is defined by three parameters:
@@ -96,40 +108,66 @@ export class Fault {
     // Sense of mouvement: N, I, RL, LL, N-RL, N-LL, I-RL, I-LL
     private sensMouv: SensOfMovement
 
+    // We define 2 orthonormal right-handed reference systems:
+    //      S =  (X, Y, Z ) is the geographic reference frame oriented in (East, North, Up) directions.
+    //      S' = (X',Y',Z') is the principal stress reference frame, parallel to (sigma_1, sigma_3, sigma_2);
+
     // (phi,theta) : spherical coordinate angles defining the unit vector perpendicular to the fault plane (pointing upward)
-    //                 in the geographic reference system: S = (X,Y,Z) = (E,N,Up)
+    //                 in reference system S
     // phi : azimuth phi in interval [0, 2 PI), measured anticlockwise from the X axis (East direction) in reference system S
     // theta: colatitude or polar angle in interval [0, PI/2], measured downward from the zenith (upward direction)
-    private phi:    number      // constant value for each fault plane
-    private theta:  number      // constant value for each fault plane
-    // normal: unit vector normal to the fault plane (pointing upward) defined in the geographic reference system: S = (X,Y,Z)
-    private normal : Point3D       // constant values for each fault plane
+    private coordinates: SphericalCoords = new SphericalCoords()
+
+    // private phi:    number      // constant value for each fault plane
+    // private theta:  number      // constant value for each fault plane
+ 
+    // normal: unit vector normal to the fault plane (pointing upward) defined in the geographic reference system S
+    private normal_ :    Point3D       // constant values for each fault plane
+    // (e_phi, e_theta) = unit vectors defining local reference frame tangent to the sphere in spherical coordinates
+    private e_phi:      Point3D
+    private e_theta:    Point3D
+       
     // normalSp: unit vector normal to the fault plane (pointing upward) defined in the stress tensor reference system: S' = (X',Y',Z')=(s1,s3,s2)
-    private normalSp : Point3D       // values should be recalculated for new stress tensors
-    // (phi,theta) : spherical coordinate angles defining the unit vector perpendicular to the fault plane (pointing upward in system S)
+    private normalSp :  Point3D       // values should be recalculated for new stress tensors
+    // (phiSp,thetaSp) : spherical coordinate angles defining the unit vector perpendicular to the fault plane (pointing upward in system S)
     //                 in the stress tensor reference system: S' = (X,Y,Z)
-    private phiSp:    number      // constant values for each fault plane
-    private thetaSp:  number      // values are recalculated for new stress tensors
+    // private phiSp:    number      // constant values for each fault plane
+    // private thetaSp:  number      // values are recalculated for new stress tensors
+    private coordinatesSp: SphericalCoords = new SphericalCoords()
+
+    private RTrot: Matrix3x3 = newMatrix3x3()
     
     // striation: unit vector pointing toward the measured striation in the geographic reference system: S = (X,Y,Z)
     private striation:      Point3D      // constant value for each fault plane
     // striationSp: unit vector pointing toward the measured striation in the stress tensor reference system: S' = (X',Y',Z')
     private striationSp:    Point3D     // values are recalculated for new stress tensors
-    // stressSp: stress vector in the stress tensor reference system: S' = (X',Y',Z')
-    private stressSp:       Point3D     // values are recalculated for new stress tensors
-    // shearStressSp: shear stress vector in the stress tensor reference system: S' = (X',Y',Z')
-    private shearStressSp:  Point3D     // values are recalculated for new stress tensors
+    // stress: stress vector in the geographic reference system: S = (X,Y,Z)
+    private stress:         Point3D     // values are recalculated for new stress tensors
+    // shearStressSp: shear stress vector in the geographic reference system: S = (X,Y,Z)
+    private shearStress
 
-    private stressMag:       number     // values are recalculated for new stress tensors
-    private normalStressMag: number     // values are recalculated for new stress tensors
-    private shearStressMag:  number     // values are recalculated for new stress tensors
+    private stressMag:          number     // values are recalculated for new stress tensors
+    private normalStress:       number     // values are recalculated for new stress tensors
+    private shearStressMag:     number     // values are recalculated for new stress tensors
 
     private alphaStriaDeg = 0
     private alphaStria = 0
+    // e_striation_: unit vector in reference system S pointing toward the measured striation
+    private e_striation_:    Point3D
+    // angularDifStriae: angular difference between the measured and calculated striations
+    private angularDifStriae
 
     private upliftedBlock: Direction
 
     private isUpLiftedBlock: boolean = false
+
+    get normal(): Point3D {
+        return this.normal_
+    }
+
+    get e_striation(): Point3D {
+        return this.e_striation_
+    }
 
     private faultSphericalCoords(): void {
         // Each fault is defined by a set of parameters as follows:
@@ -147,7 +185,7 @@ export class Fault {
         //  Write functions relating trend and rake
     
         // The polar angle (or colatitude) theta is defined by the dip of the fault plane in radians:
-        this.theta = deg2rad( this.dip )
+        this.coordinates.theta = deg2rad( this.dip )
     
         // This function calculates the azimuth phi such that the right-handed local coordinate system in polar coordinates is located in the upper hemisphere.
         //      In other words, the radial unit vector is in the upper hemisphere.
@@ -163,108 +201,114 @@ export class Fault {
             // The fault plane is vertical and the dip direction is not defined
             if ( this.strike <= 180 ) {
                 // phi is in interval [0,PI]
-                this.phi = Math.PI - deg2rad( this.strike )
+                this.coordinates.phi = Math.PI - deg2rad( this.strike )
             } else {
                 // fault strike is in interval (PI,2 PI) and phi is in interval (PI,2 PI)
-                this.phi = 3 * Math.PI - deg2rad( this.strike )
+                this.coordinates.phi = 3 * Math.PI - deg2rad( this.strike )
             }
         }
         else if ( this.strike === 0 ) {    // The fault plane is not vertical and the dip direction is defined
     
-            if ( this.dipDirection = Direction.E ) {
-                this.phi = 0
-            } else if ( this.dipDirection = Direction.W ) {
-                this.phi = Math.PI
+            if ( this.dipDirection === Direction.E ) {
+                this.coordinates.phi = 0
+            } else if ( this.dipDirection === Direction.W ) {
+                this.coordinates.phi = Math.PI
             } else {
                 throw new Error(`dip direction is wrong. Should be E or W`)
             }
         } else if ( this.strike < 90 ){
     
-            if ( ( this.dipDirection = Direction.S ) || ( this.dipDirection = Direction.E ) || ( this.dipDirection = Direction.SE ) ) {
-                // this.strike + this.phi = 2Pi
-                this.phi = 2 * Math.PI - deg2rad( this.strike ) 
+            if ( ( this.dipDirection === Direction.S ) || ( this.dipDirection === Direction.E ) || ( this.dipDirection === Direction.SE ) ) {
+                // this.strike + this.coordinates.phi = 2Pi
+                this.coordinates.phi = 2 * Math.PI - deg2rad( this.strike ) 
     
-            } else if ( ( this.dipDirection = Direction.N ) || ( this.dipDirection = Direction.W ) || ( this.dipDirection = Direction.NW ) ) {
-                // this.strike + this.phi = Pi
-                this.phi = Math.PI - deg2rad( this.strike ) 
+            } else if ( ( this.dipDirection === Direction.N ) || ( this.dipDirection === Direction.W ) || ( this.dipDirection === Direction.NW ) ) {
+                // this.strike + this.coordinates.phi = Pi
+                this.coordinates.phi = Math.PI - deg2rad( this.strike ) 
             } else {
                 throw new Error(`dip direction is wrong. Should be N, S, E, W, SE or NW`)
             }    
         } else if ( this.strike === 90 ) {
-            if ( this.dipDirection = Direction.S ) {
-                this.phi = 3 * Math.PI / 2
-            } else if ( this.dipDirection = Direction.N ) {
-                this.phi = Math.PI / 2
+            if ( this.dipDirection === Direction.S ) {
+                this.coordinates.phi = 3 * Math.PI / 2
+            } else if ( this.dipDirection === Direction.N ) {
+                this.coordinates.phi = Math.PI / 2
             } else {
                 throw new Error(`dip direction is wrong. Should be N or S`)
             }
         } else if ( this.strike < 180 ){
     
-            if ( ( this.dipDirection = Direction.S ) || ( this.dipDirection = Direction.W ) || ( this.dipDirection = Direction.SW ) ) {
-                // this.strike + this.phi = 2Pi
-                this.phi = 2 * Math.PI - deg2rad( this.strike ) 
+            if ( ( this.dipDirection === Direction.S ) || ( this.dipDirection === Direction.W ) || ( this.dipDirection === Direction.SW ) ) {
+                // this.strike + this.coordinates.phi = 2Pi
+                this.coordinates.phi = 2 * Math.PI - deg2rad( this.strike ) 
     
-            } else if ( ( this.dipDirection = Direction.N ) || ( this.dipDirection = Direction.E ) || ( this.dipDirection = Direction.NE ) ) {
-                // this.strike + this.phi = Pi
-                this.phi = Math.PI - deg2rad( this.strike ) 
+            } else if ( ( this.dipDirection === Direction.N ) || ( this.dipDirection === Direction.E ) || ( this.dipDirection === Direction.NE ) ) {
+                // this.strike + this.coordinates.phi = Pi
+                this.coordinates.phi = Math.PI - deg2rad( this.strike ) 
             } else {
                 throw new Error(`dip direction is wrong. Should be N, S, E, W, SE or NW`)
             }    
         }
         else if ( this.strike === 180 ) {
-            if ( this.dipDirection = Direction.W ) {
-                this.phi = Math.PI
-            } else if ( this.dipDirection = Direction.E ) {
-                this.phi = 0
+            if ( this.dipDirection === Direction.W ) {
+                this.coordinates.phi = Math.PI
+            } else if ( this.dipDirection === Direction.E ) {
+                this.coordinates.phi = 0
             } else {
                 throw new Error(`dip direction is wrong. Should be E or W`)
             }
         } else if ( this.strike < 270 ){
     
-            if ( ( this.dipDirection = Direction.N ) || ( this.dipDirection = Direction.W ) || ( this.dipDirection = Direction.NW ) ) {
-                // this.strike + this.phi = 2Pi
-                this.phi = 2 * Math.PI - deg2rad( this.strike ) 
+            if ( ( this.dipDirection === Direction.N ) || ( this.dipDirection === Direction.W ) || ( this.dipDirection === Direction.NW ) ) {
+                // this.strike + this.coordinates.phi = 2Pi
+                this.coordinates.phi = 2 * Math.PI - deg2rad( this.strike ) 
     
-            } else if ( ( this.dipDirection = Direction.S ) || ( this.dipDirection = Direction.E ) || ( this.dipDirection = Direction.SE ) ) {
-                // this.strike + this.phi = 3Pi
-                this.phi = 3 * Math.PI - deg2rad( this.strike ) 
+            } else if ( ( this.dipDirection === Direction.S ) || ( this.dipDirection === Direction.E ) || ( this.dipDirection === Direction.SE ) ) {
+                // this.strike + this.coordinates.phi = 3Pi
+                this.coordinates.phi = 3 * Math.PI - deg2rad( this.strike ) 
     
             } else {
                 throw new Error(`dip direction is wrong. Should be N, S, E, W, NW or SE`)
             }    
         } else if ( this.strike === 270 ) {
-            if ( this.dipDirection = Direction.S ) {
-                this.phi = 3 * Math.PI / 2
-            } else if ( this.dipDirection = Direction.N ) {
-                this.phi = Math.PI / 2
+            if ( this.dipDirection === Direction.S ) {
+                this.coordinates.phi = 3 * Math.PI / 2
+            } else if ( this.dipDirection === Direction.N ) {
+                this.coordinates.phi = Math.PI / 2
             } else {
                 throw new Error(`dip direction is wrong. Should be N or S`)
             }
         } else if ( this.strike < 360 ){
     
-            if ( ( this.dipDirection = Direction.N ) || ( this.dipDirection = Direction.E ) || ( this.dipDirection = Direction.NE ) ) {
-                // this.strike + this.phi = 2Pi
-                this.phi = 2 * Math.PI - deg2rad( this.strike ) 
+            if ( ( this.dipDirection === Direction.N ) || ( this.dipDirection === Direction.E ) || ( this.dipDirection === Direction.NE ) ) {
+                // this.strike + this.coordinates.phi = 2Pi
+                this.coordinates.phi = 2 * Math.PI - deg2rad( this.strike ) 
     
-            } else if ( ( this.dipDirection = Direction.S ) || ( this.dipDirection = Direction.W ) || ( this.dipDirection = Direction.SW ) ) {
-                // this.strike + this.phi = 3Pi
-                this.phi = 3 * Math.PI - deg2rad( this.strike ) 
+            } else if ( ( this.dipDirection === Direction.S ) || ( this.dipDirection === Direction.W ) || ( this.dipDirection === Direction.SW ) ) {
+                // this.strike + this.coordinates.phi = 3Pi
+                this.coordinates.phi = 3 * Math.PI - deg2rad( this.strike ) 
     
             } else {
                 throw new Error(`dip direction is wrong. Should be N, S, E, W, NE or SW`)
             }
         }
         else if ( this.strike === 360 ) {
-            if ( this.dipDirection = Direction.E ) {
-                this.phi = 0
-            } else if ( this.dipDirection = Direction.W ) {
-                this.phi = Math.PI
+            if ( this.dipDirection === Direction.E ) {
+                this.coordinates.phi = 0
+            } else if ( this.dipDirection === Direction.W ) {
+                this.coordinates.phi = Math.PI
             } else {
                 throw new Error(`dip direction is wrong. Should be E or W`)
             }
         } else {
             throw new Error(`Strike is wrong. Should be in interval [0,360]`)
-        }    
+        }   
+
+        // The fault plane is defined by angles (phi, theta) in spherical coordinates.
+        // normal: unit vector normal to the fault plane (pointing upward) defined in the geographic reference system: S = (X,Y,Z)
+        this.normal_ = spherical2unitVectorCartesian(this.coordinates)
+
+        // --------------------------------------        
     }
 
     private faultStriationAngle_A(): void {
@@ -289,11 +333,21 @@ export class Fault {
     
         // alphaStria : striation angle measured in the local reference plane (e_phi, e_theta) indicating the motion of the outward block
         //      alphaStria is measured clockwise from e_phi, in interval [0, 2 PI) (this choice is consistent with the definition of the rake, which is measured from the fault strike)
+        this.e_phi[0] = - Math.sin( this.coordinates.phi )
+        this.e_phi[1] =   Math.cos( this.coordinates.phi )
+        this.e_phi[0] =   0
+
+        this.e_theta[0] =   Math.cos(this.coordinates.theta) * Math.cos( this.coordinates.phi )
+        this.e_theta[1] =   Math.cos(this.coordinates.theta) * Math.sin( this.coordinates.phi )
+        this.e_theta[0] = - Math.sin( this.coordinates.theta )
+
+        // V[0] = Math.sin(this.coordinates.theta) * Math.cos( this.coordinates.phi )
+        // V[1] = Math.sin(this.coordinates.theta) * Math.sin( this.coordinates.phi )
+        // V[2] = Math.cos(this.coordinates.theta)
     
         // if structure for calculating the striation angle in the local reference frame in polar coordinates from the rake:
-    
+
         // The following 'if structure' calculates phi from the strike and dip direction (if defined) of the fault plane:
-    
         if ( this.dip=== 90 ) {
             // The fault plane is vertical and the dip direction is not defined
     
@@ -404,7 +458,7 @@ export class Fault {
         } else {      // The fault plane is not vertical and the dip direction is defined
     
             if ( this.strike === 0 ) {
-                if ( this.dipDirection = Direction.E ) {    
+                if ( this.dipDirection === Direction.E ) {    
                     if (this.strikeDirection === Direction.N) {
                         this.alphaStriaDeg = this.rake          // For testing the sense of mouvement of faults 
                         this.alphaStria = deg2rad( this.rake )
@@ -414,7 +468,7 @@ export class Fault {
                     } else {
                         throw new Error(`Strike direction for measuring the rake is wrong. Should be N or S`)
                     }
-                } else if ( this.dipDirection = Direction.W ) {
+                } else if ( this.dipDirection === Direction.W ) {
                     if (this.strikeDirection === Direction.N) {
                        this.alphaStriaDeg = 180 - this.rake  
                        this.alphaStria = Math.PI - deg2rad( this.rake )
@@ -429,7 +483,7 @@ export class Fault {
                 }
             } else if ( this.strike < 90 ){
     
-                if ( ( this.dipDirection = Direction.S ) || ( this.dipDirection = Direction.E ) || ( this.dipDirection = Direction.SE ) ) {
+                if ( ( this.dipDirection === Direction.S ) || ( this.dipDirection === Direction.E ) || ( this.dipDirection === Direction.SE ) ) {
                     if ( (this.strikeDirection === Direction.N) || (this.strikeDirection === Direction.E) || (this.strikeDirection === Direction.NE) ) {
                         this.alphaStriaDeg = this.rake           
                         this.alphaStria = deg2rad( this.rake )
@@ -439,7 +493,7 @@ export class Fault {
                     } else {
                         throw new Error(`Strike direction for measuring the rake is wrong. Should be N, S, E, W, NE or SW `)
                     }
-                } else if ( ( this.dipDirection = Direction.N ) || ( this.dipDirection = Direction.W ) || ( this.dipDirection = Direction.NW ) ) {
+                } else if ( ( this.dipDirection === Direction.N ) || ( this.dipDirection === Direction.W ) || ( this.dipDirection === Direction.NW ) ) {
                     if ( (this.strikeDirection === Direction.N) || (this.strikeDirection === Direction.E) || (this.strikeDirection === Direction.NE) ) {
                         this.alphaStriaDeg = 180 - this.rake  
                         this.alphaStria = Math.PI - deg2rad( this.rake )
@@ -454,7 +508,7 @@ export class Fault {
                 }    
             } else if ( this.strike === 90 ) {
     
-                if ( this.dipDirection = Direction.S ) {
+                if ( this.dipDirection === Direction.S ) {
                     if (this.strikeDirection === Direction.E) {
                         this.alphaStriaDeg = this.rake           
                         this.alphaStria = deg2rad( this.rake )
@@ -464,7 +518,7 @@ export class Fault {
                     } else {
                         throw new Error(`Strike direction for measuring the rake is wrong. Should be E or W`)
                     }
-                } else if ( this.dipDirection = Direction.N ) {
+                } else if ( this.dipDirection === Direction.N ) {
                     if (this.strikeDirection === Direction.E) {
                         this.alphaStriaDeg = 180 - this.rake  
                         this.alphaStria = Math.PI - deg2rad( this.rake )
@@ -479,7 +533,7 @@ export class Fault {
                 }  
             } else if ( this.strike < 180 ){
     
-                if ( ( this.dipDirection = Direction.S ) || ( this.dipDirection = Direction.W ) || ( this.dipDirection = Direction.SW ) ) {
+                if ( ( this.dipDirection === Direction.S ) || ( this.dipDirection === Direction.W ) || ( this.dipDirection === Direction.SW ) ) {
                     if ( (this.strikeDirection === Direction.S) || (this.strikeDirection === Direction.E) || (this.strikeDirection === Direction.SE) ) {
                         this.alphaStriaDeg = this.rake           
                         this.alphaStria = deg2rad( this.rake )
@@ -489,7 +543,7 @@ export class Fault {
                     } else {
                         throw new Error(`Strike direction for measuring the rake is wrong. Should be N, S, E, W, SE or NW `)
                     }
-                } else if ( ( this.dipDirection = Direction.N ) || ( this.dipDirection = Direction.E ) || ( this.dipDirection = Direction.NE ) ) {
+                } else if ( ( this.dipDirection === Direction.N ) || ( this.dipDirection === Direction.E ) || ( this.dipDirection === Direction.NE ) ) {
                     if ( (this.strikeDirection === Direction.S) || (this.strikeDirection === Direction.E) || (this.strikeDirection === Direction.SE) ) {
                         this.alphaStriaDeg = 180 - this.rake  
                         this.alphaStria = Math.PI - deg2rad( this.rake )
@@ -504,7 +558,7 @@ export class Fault {
                 }    
             } else if ( this.strike === 180 ) {
     
-                if ( this.dipDirection = Direction.W ) {
+                if ( this.dipDirection === Direction.W ) {
                     if (this.strikeDirection === Direction.S) {
                         this.alphaStriaDeg = this.rake           
                         this.alphaStria = deg2rad( this.rake )
@@ -514,7 +568,7 @@ export class Fault {
                     } else {
                         throw new Error(`Strike direction for measuring the rake is wrong. Should be N or S`)
                     }
-                } else if ( this.dipDirection = Direction.E ) {
+                } else if ( this.dipDirection === Direction.E ) {
                     if (this.strikeDirection === Direction.S) {
                         this.alphaStriaDeg = 180 - this.rake  
                         this.alphaStria = Math.PI - deg2rad( this.rake )
@@ -529,7 +583,7 @@ export class Fault {
                 }  
             } else if ( this.strike < 270 ){
     
-                if ( ( this.dipDirection = Direction.N ) || ( this.dipDirection = Direction.W ) || ( this.dipDirection = Direction.NW ) ) {
+                if ( ( this.dipDirection === Direction.N ) || ( this.dipDirection === Direction.W ) || ( this.dipDirection === Direction.NW ) ) {
                     if ( (this.strikeDirection === Direction.S) || (this.strikeDirection === Direction.W) || (this.strikeDirection === Direction.SW) ) {
                         this.alphaStriaDeg = this.rake           
                         this.alphaStria = deg2rad( this.rake )
@@ -539,7 +593,7 @@ export class Fault {
                     } else {
                         throw new Error(`Strike direction for measuring the rake is wrong. Should be N, S, E, W, SW or NE `)
                     }
-                } else if ( ( this.dipDirection = Direction.S ) || ( this.dipDirection = Direction.E ) || ( this.dipDirection = Direction.SE ) ) {
+                } else if ( ( this.dipDirection === Direction.S ) || ( this.dipDirection === Direction.E ) || ( this.dipDirection === Direction.SE ) ) {
                     if ( (this.strikeDirection === Direction.S) || (this.strikeDirection === Direction.W) || (this.strikeDirection === Direction.SW) ) {
                         this.alphaStriaDeg = 180 - this.rake  
                         this.alphaStria = Math.PI - deg2rad( this.rake )
@@ -554,7 +608,7 @@ export class Fault {
                 }    
             } else if ( this.strike === 270 ) {
     
-                if ( this.dipDirection = Direction.N ) {
+                if ( this.dipDirection === Direction.N ) {
                     if (this.strikeDirection === Direction.W) {
                         this.alphaStriaDeg = this.rake           
                         this.alphaStria = deg2rad( this.rake )
@@ -564,7 +618,7 @@ export class Fault {
                     } else {
                         throw new Error(`Strike direction for measuring the rake is wrong. Should be E or W`)
                     }
-                } else if ( this.dipDirection = Direction.S ) {
+                } else if ( this.dipDirection === Direction.S ) {
                     if (this.strikeDirection === Direction.W) {
                         this.alphaStriaDeg = 180 - this.rake  
                         this.alphaStria = Math.PI - deg2rad( this.rake )
@@ -579,7 +633,7 @@ export class Fault {
                 }  
             } else if ( this.strike < 360 ){
     
-                if ( ( this.dipDirection = Direction.N ) || ( this.dipDirection = Direction.E ) || ( this.dipDirection = Direction.NE ) ) {
+                if ( ( this.dipDirection === Direction.N ) || ( this.dipDirection === Direction.E ) || ( this.dipDirection === Direction.NE ) ) {
                     if ( (this.strikeDirection === Direction.N) || (this.strikeDirection === Direction.W) || (this.strikeDirection === Direction.NW) ) {
                         this.alphaStriaDeg = this.rake           
                         this.alphaStria = deg2rad( this.rake )
@@ -589,7 +643,7 @@ export class Fault {
                     } else {
                         throw new Error(`Strike direction for measuring the rake is wrong. Should be N, S, E, W, NW or SE `)
                     }
-                } else if ( ( this.dipDirection = Direction.S ) || ( this.dipDirection = Direction.W ) || ( this.dipDirection = Direction.SW ) ) {
+                } else if ( ( this.dipDirection === Direction.S ) || ( this.dipDirection === Direction.W ) || ( this.dipDirection === Direction.SW ) ) {
                     if ( (this.strikeDirection === Direction.N) || (this.strikeDirection === Direction.W) || (this.strikeDirection === Direction.NW) ) {
                         this.alphaStriaDeg = 180 - this.rake  
                         this.alphaStria = Math.PI - deg2rad( this.rake )
@@ -604,7 +658,7 @@ export class Fault {
                 }  
             } else if ( this.strike === 360 ) {
                     // This case should not occur since in principle strike < 360
-                if ( this.dipDirection = Direction.E ) {
+                if ( this.dipDirection === Direction.E ) {
                     if (this.strikeDirection === Direction.N) {
                         this.alphaStriaDeg = this.rake           
                         this.alphaStria = deg2rad( this.rake )
@@ -614,7 +668,7 @@ export class Fault {
                     } else {
                         throw new Error(`Strike direction for measuring the rake is wrong. Should be N or S`)
                     }
-                } else if ( this.dipDirection = Direction.W ) {
+                } else if ( this.dipDirection === Direction.W ) {
                     if (this.strikeDirection === Direction.N) {
                         this.alphaStriaDeg = 180 - this.rake  
                         this.alphaStria = Math.PI - deg2rad( this.rake )
@@ -637,6 +691,7 @@ export class Fault {
     private faultStriationAngle_B(): void {
         // Function introducuing the effect of fault movement on the striation angle
         // This function is called after function faultStriationAngle_A
+        // We calculate a unit vector e_striation pointing toward the measured striation
     
         // Sense of mouvement: For verification purposes, it is recommended to indicate both the dip-slip and strike-slip compoenents, when possible. 
         //      Dip-slip component:
@@ -732,6 +787,11 @@ export class Fault {
                 throw new Error(`calculated striation alphaStriaDeg should be in interval [0,180]. Check routine faultStriationAngle_A`)
                 }
         }
+        
+        // Calculate in reference system S the unit vector e_striation pointing toward the measured striation
+        this.e_striation_[0] = Math.cos( this.alphaStria ) * this.e_phi[0] + Math.sin( this.alphaStria ) * this.e_theta[0]
+        this.e_striation_[1] = Math.cos( this.alphaStria ) * this.e_phi[1] + Math.sin( this.alphaStria ) * this.e_theta[1]
+        this.e_striation_[2] = Math.cos( this.alphaStria ) * this.e_phi[2] + Math.sin( this.alphaStria ) * this.e_theta[2]
     }
 
     private faultStriationUpliftedBlock(): void {
@@ -828,15 +888,59 @@ export class Fault {
         }
     }
 
-    private faultNormalVector(): void {
-    /** 
-     * Define unit vector normal to the fault plane in the upper hemisphere (pointing upward) from angles in spherical coordinates.
-     * The normal vector is constnat for each fault plane and is defined in the geographic reference system: S = (X,Y,Z)
-    */
-        this.normal[0] = Math.sin( this.phi) * Math.cos( this.theta)
-        this.normal[1] = Math.sin( this.phi) * Math.sin( this.theta)
-        this.normal[2] = Math.cos( this.phi)
+    private createUpLiftedBlock() {
+        const f = new Fault({strike: 0, dipDirection: Direction.E, dip: 90, sensOfMovement: SensOfMovement.N}) // TODO: params in ctor
+        f.setStriation({rake: 90, sensMouv: SensOfMovement.UKN})
+        /**
+        * There is one particular case in which the sens of mouvement has to be defined with a different parameter:
+        * A vertical plane with rake = 90.
+        * In such situation the user must indicate for example the direction of the uplifted block:
+        *      upLiftedBlock: (N, E, S, W) or a combination of two directions (NE, SE, SW, NW).
+        */
+
+        return f
     }
+
+
+    private faultSphericalCoordsSP() {
+        // Calculate the spherical coordinates of the unit vector normal to the plane in reference system S'
+
+        // normalSp: unit vector normal to the fault plane (pointing upward) defined in the stress tensor reference system: S' = (X',Y',Z')=(sigma 1,sigma 3,sigma 2)
+        //          values should be recalculated for new stress tensors    
+        
+        // Let Rrot be the rotation tensor R between reference systems S and S', such that:
+        //      V' = R V,  where V and V' are the same vector defined in reference frames S and S', respectively
+
+        this.normalSp = tensor_x_Vector({T: this.RTrot, V: this.normal})
+
+        if (this.normalSp[0] > 0) {
+            if (this.normalSp[1] >= 0) {
+                // phiSp is in interval [0, Pi/2)
+                this.coordinatesSp.phi = Math.atan( this.normalSp[1] / this.normalSp[0] )
+            } else {
+                // phiSp is in interval (3Pi/2, 2Pi)
+                // atan is probably defined in interval (-Pi/2, Pi/2)
+                this.coordinatesSp.phi = 2 * Math.PI + Math.atan( this.normalSp[1] / this.normalSp[0] )
+            }
+        } else if ( this.normalSp[0] < 0 ) {
+            if (this.normalSp[1] >= 0) {
+                // phiSp is in interval (Pi/2, Pi]
+                this.coordinatesSp.phi = Math.atan( this.normalSp[1] / this.normalSp[0] ) + Math.PI
+            } else {
+                // phiSp is defined in interval [Pi, 3Pi/2)
+                this.coordinatesSp.phi = Math.atan( this.normalSp[1] / this.normalSp[0] ) + Math.PI
+            }
+        } else {
+            if (this.normalSp[1] > 0) {
+                // phiSp = Pi/2
+                this.coordinatesSp.phi = Math.PI / 2
+            } else {
+                // phiSp = 3Pi/2
+                this.coordinatesSp.phi = 3 * Math.PI / 2
+            }
+        }
+
+    } 
 
     private faultNormalVectorSp(): void {
     /**
@@ -858,36 +962,6 @@ export class Fault {
         // this.x = Math.sin( rotAx_phi);
     }
 }
-
-
- 
-
- 
-
-/**
- * There is one particular case in which the sens of mouvement has to be defined with a different parameter:
- * A vertical plane with rake = 90.
- * In such situation the user must indicate for example the direction of the uplifted block:
- *      upLiftedBlock: (N, E, S, W) or a combination of two directions (NE, SE, SW, NW).
- */
-export function createUpLiftedBlock() {
-    const f = new Fault({strike: 0, dipDirection: Direction.E, dip: 90}) // TODO: params in ctor
-    f.setStriation({rake: 90, sensMouv: SensOfMovement.UKN})
-    return f
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 // Stress parameters:
