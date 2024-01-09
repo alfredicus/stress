@@ -38,6 +38,7 @@ export class ExtensionFracture extends Data {
 
     initialize(args: Tokens[]): DataStatus {
         const toks = args[0]
+        this.toks = toks
         const plane = decodePlane(toks)
 
         // Calculate the unit vector normal to the Plane

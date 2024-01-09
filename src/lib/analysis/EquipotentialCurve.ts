@@ -8,6 +8,11 @@ export class EquipotentialCurve implements GenericCurve {
     private exp_cos: number
     private exp_sin: number
 
+    /**
+     * Generate the equipotential curve as a Gocad PLine string
+     * @param lambda λ are the eigen values such that λ[0] is S1, λ[2] is S2 and λ[1] is S3
+     * @param radius The sphere radius
+     */
     constructor(private lambda: [number, number, number], radius = 1) {
         this.r = radius
         this.exp_sin = ( this.lambda[0] - this.lambda[2] ) / ( this.lambda[1] - this.lambda[0] )

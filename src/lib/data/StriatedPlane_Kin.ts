@@ -27,6 +27,7 @@ export class StriatedPlaneKin extends Data {
 
     initialize(args: Tokens[]): DataStatus {
         const toks = args[0]
+        this.toks = args[0]
         const result = createDataStatus()
         const arg = createDataArgument()
         arg.toks = toks

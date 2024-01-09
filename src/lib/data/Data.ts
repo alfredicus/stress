@@ -11,6 +11,7 @@ export abstract class Data  {
     protected weight_: number = 1
     protected active_ = true
     protected pos: Point3D = [0,0,0]
+    private toks_: Tokens = undefined
     //private userSpace_ : UserSpace = UserSpace.INVERSE
 
     get position(): Point3D {
@@ -27,6 +28,14 @@ export abstract class Data  {
 
     get active() {
         return this.active_
+    }
+
+    get toks(): Tokens {
+        return this.toks_
+    }
+
+    protected set toks(t: Tokens) {
+        this.toks_ = [...t]
     }
 
     // description(): any {

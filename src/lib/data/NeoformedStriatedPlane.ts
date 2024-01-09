@@ -123,6 +123,7 @@ export class NeoformedStriatedPlane extends Data {
 
     initialize(args: Tokens[]): DataStatus {
         const toks = args[0]
+        this.toks = toks
         let result = createDataStatus()
         const arg: DataArgument = createDataArgument()
 

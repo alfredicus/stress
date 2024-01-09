@@ -70,6 +70,7 @@ export class StriatedCompactionalShearBand extends NeoformedStriatedPlane {
 
     initialize(args: Tokens[]): DataStatus {
         const toks = args[0]
+        this.toks = toks
         const result = createDataStatus()
         const arg = createDataArgument()
 

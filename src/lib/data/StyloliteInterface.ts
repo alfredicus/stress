@@ -39,6 +39,8 @@ import { DataFactory } from "./Factory"
 
     initialize(args: Tokens[]): DataStatus {
         const toks = args[0]
+        this.toks = toks
+        
         const result = createDataStatus()
 
         const arg: DataArgument = createDataArgument()

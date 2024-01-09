@@ -41,6 +41,7 @@ export class StyloliteTeeth extends StyloliteInterface {
     
     initialize(args: Tokens[]): DataStatus {
         const toks = args[0]
+        this.toks = toks
         const result = { status: true, messages: [] }
         
         // -----------------------------------
