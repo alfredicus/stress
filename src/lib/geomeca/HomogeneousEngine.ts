@@ -8,9 +8,17 @@ export class HomogeneousEngine implements Engine {
     private S1_Xh:  Vector3 = undefined
     private S3_Yh:  Vector3 = undefined
     private S2_Zh:  Vector3 = undefined
-    private values: Vector3 = undefined
+    private s1_Xh = 0
+    private s3_Yh = 0
+    private s2_Zh = 0
     private Hrot_:   Matrix3x3 = undefined
     private stressRatio_: number = undefined
+
+    constructor( Hrot?: Matrix3x3, stressRatio?: number) {
+        if (Hrot && stressRatio) {
+            this.setHypotheticalStress(Hrot, stressRatio)
+        }
+    }
 
     setHypotheticalStress(Hrot: Matrix3x3, stressRatio: number): void {
         const s = fromRotationsToTensor(Hrot, stressRatio)
@@ -18,7 +26,9 @@ export class HomogeneousEngine implements Engine {
         this.S1_Xh = s.S1_X
         this.S3_Yh = s.S3_Y
         this.S2_Zh = s.S2_Z
-        this.values = [s.s1_X, s.s2_Z, s.s3_Y]
+        this.s1_Xh = s.s1_X
+        this.s3_Yh = s.s3_Y
+        this.s2_Zh = s.s2_Z
         this.Hrot_ = Hrot
         this.stressRatio_ = stressRatio
     }
@@ -29,11 +39,9 @@ export class HomogeneousEngine implements Engine {
             S1_X: this.S1_Xh, 
             S3_Y: this.S3_Yh,
             S2_Z: this.S2_Zh, 
-            s1_X: this.values[0],
-            s3_Y: this.values[1],
-            s2_Z: this.values[2],
-            // s2_Z: this.values[2],
-            // s3_Y: this.values[1],
+            s1_X: this.s1_Xh,
+            s3_Y: this.s3_Yh,
+            s2_Z: this.s2_Zh,
             Hrot: this.Hrot_
         }
     }

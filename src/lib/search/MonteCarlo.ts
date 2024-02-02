@@ -1,10 +1,12 @@
 import { Data } from "../data"
 import { Engine, HomogeneousEngine } from "../geomeca"
+import { generateStressTensor } from "../geomeca/generateStressTensor"
 import { cloneMisfitCriteriunSolution, MisfitCriteriunSolution } from "../InverseMethod"
-import { 
-    cloneMatrix3x3, Matrix3x3, multiplyTensors, 
-    newMatrix3x3, newMatrix3x3Identity, properRotationTensor, 
-    spherical2unitVectorCartesian, SphericalCoords, transposeTensor
+import {
+    cloneMatrix3x3, Matrix3x3, multiplyTensors,
+    newMatrix3x3, newMatrix3x3Identity, Pi, properRotationTensor,
+    rand,
+    spherical2unitVectorCartesian, SphericalCoords, transposeTensor, TwoPi
 } from "../types"
 import { SearchMethod } from "./SearchMethod"
 // import { stressTensorDelta } from "./utils"
@@ -30,11 +32,10 @@ export class MonteCarlo implements SearchMethod {
     private engine: Engine = new HomogeneousEngine()
 
     constructor(
-        {stressRatio=0.5, stressRatioHalfInterval=0.25, rotAngleHalfInterval=Math.PI, nbRandomTrials=1000, Rrot=newMatrix3x3Identity()}:
-        MonteCarloParams = {})
-    {
+        { stressRatio = 0.5, stressRatioHalfInterval = 0.25, rotAngleHalfInterval = Math.PI, nbRandomTrials = 1000, Rrot = newMatrix3x3Identity() }:
+            MonteCarloParams = {}) {
         this.rotAngleHalfInterval = rotAngleHalfInterval
-        this.nbRandomTrials= nbRandomTrials
+        this.nbRandomTrials = nbRandomTrials
         this.stressRatio0 = stressRatio
         this.stressRatioHalfInterval = stressRatioHalfInterval
         this.Rrot = Rrot
@@ -53,7 +54,7 @@ export class MonteCarlo implements SearchMethod {
         this.engine = engine
     }
 
-    setInteractiveSolution({rot, stressRatio}:{rot: Matrix3x3, stressRatio: number}): void {
+    setInteractiveSolution({ rot, stressRatio }: { rot: Matrix3x3, stressRatio: number }): void {
         this.Rrot = rot
         this.stressRatio0 = stressRatio
     }
@@ -64,19 +65,19 @@ export class MonteCarlo implements SearchMethod {
         // More precisely, the minimization function is calculated for a set of stress tensors whose orientations are rotated around axes 
         // defined by a Montecarlo algorithm distributed "quasi-homogeneously" on the sphere surface.
         // The magnitude of rotations and the stress ratio are also defined by random variables calculated within specified intervals.
-        
+
         // Stress ratio variation stressRatioHalfInterval around R = (S2-S3)/(S1-S3), is constrained to interval [0,1]
-        let stressRatioMin = Math.max(0, Math.abs(this.stressRatio0) - this.stressRatioHalfInterval )
-        let stressRatioMax = Math.min(1, Math.abs(this.stressRatio0) + this.stressRatioHalfInterval )
+        let stressRatioMin = Math.max(0, Math.abs(this.stressRatio0) - this.stressRatioHalfInterval)
+        let stressRatioMax = Math.min(1, Math.abs(this.stressRatio0) + this.stressRatioHalfInterval)
 
         let stressRatioEffectiveInterval = stressRatioMax - stressRatioMin
 
         // console.log(this.stressRatio0, stressRatioMin, stressRatioMax, stressRatioEffectiveInterval)
-           
-        let DTrot: Matrix3x3   = newMatrix3x3()
-        let Drot:  Matrix3x3   = newMatrix3x3()
-        let WTrot: Matrix3x3   = newMatrix3x3()
-        let Wrot:  Matrix3x3   = newMatrix3x3()
+
+        let DTrot: Matrix3x3 = newMatrix3x3()
+        let Drot: Matrix3x3 = newMatrix3x3()
+        let WTrot: Matrix3x3 = newMatrix3x3()
+        let Wrot: Matrix3x3 = newMatrix3x3()
 
         let rotAxisSpheCoords = new SphericalCoords
 
@@ -104,7 +105,12 @@ export class MonteCarlo implements SearchMethod {
             // Calculate rotation tensors Drot and DTrot between systems Sr and Sw such that:
             //  Vr  = DTrot Vw        (DTrot is tensor Drot transposed)
             //  Vw = Drot  Vr
+
+            // DTrot is the transformation matrix between systems Sw and Sr such that Sr is rotated a clockwise angle = rotAngle along rotation axis rotAxis
             DTrot = properRotationTensor({nRot: rotAxis, angle: rotAngle})
+
+            // Drot is the transformation matrix between systems Sr and Sw such that Sw is rotated an ANTI-clockwise angle = rotAngle along rotation axis rotAxis
+            //  Note that the rotation axis is the same vector for references systems Sr and Sw. Its coordinates do not change under rotation about itself.
             Drot  = transposeTensor(DTrot)
             // Calculate rotation tensors Wrot and WTrot between systems S and Sw: WTrot = RTrot DTrot, such that:
             //  V   = WTrot Vw        (WTrot is tensor Wrot transposed)
@@ -129,10 +135,10 @@ export class MonteCarlo implements SearchMethod {
 
             this.engine.setHypotheticalStress(Wrot, stressRatio)
 
-            const misfit = data.reduce( (previous, current) => {
-                return previous + current.cost({stress: this.engine.stress(current.position)})
-            } , 0) / data.length
-            
+            const misfit = data.reduce((previous, current) => {
+                return previous + current.cost({ stress: this.engine.stress(current.position) })
+            }, 0) / data.length
+
             if (misfit < newSolution.misfit) {
                 newSolution.misfit = misfit
                 newSolution.rotationMatrixD = cloneMatrix3x3(Drot)
@@ -153,15 +159,15 @@ export class MonteCarlo implements SearchMethod {
             inc++
         }
         return newSolution
-            
-    }            
+
+    }
     // To analyse the rotation axis for the best solution: 
     // The cartesian and spherical coords of a unit vector corresponding to the rotation axis are determined 
     // from the components of the tensor definning a proper rotation
     // let {rotAxis, rotAxisSpheCoords, rotMag} = rotationParamsFromRotTensor(DTrot) // **    
 }
-         
-   
+
+
 
 /*
 private monteCarloSearch() {

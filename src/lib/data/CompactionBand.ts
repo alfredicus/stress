@@ -16,7 +16,7 @@ import { StyloliteInterface } from "./StyloliteInterface"
  */
   
  export class CompactionBand extends StyloliteInterface {
-    protected normal: Vector3 = [0,0,0]
+    // protected normal: Vector3 = [0,0,0]
     protected strategy: FractureStrategy = FractureStrategy.ANGLE
 
     check({displ, strain, stress}:{displ: Vector3, strain: Matrix3x3, stress: Matrix3x3}): boolean {

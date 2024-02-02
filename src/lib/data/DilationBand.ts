@@ -18,8 +18,8 @@ import { ExtensionFracture } from "./ExtensionFracture"
  * @category Data
  */
 export class DilationBand extends ExtensionFracture {
-    protected normal: Vector3 = [0,0,0]
-    protected strategy: FractureStrategy = FractureStrategy.ANGLE
+    // protected normal: Vector3 = [0,0,0]
+    // protected strategy: FractureStrategy = FractureStrategy.ANGLE
 
     /*
     initialize(params: DataParameters[]): boolean {

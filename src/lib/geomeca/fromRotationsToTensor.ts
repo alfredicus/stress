@@ -62,8 +62,8 @@ export function fromRotationsToTensor(Hrot: Matrix3x3, stressRatio: number): Hyp
         S3_Y: S3_Yh,
         S2_Z: S2_Zh,
         s1_X: values[0],
-        s3_Y: values[1],
-        s2_Z: values[2],
+        s3_Y: values[2],
+        s2_Z: values[1],
         Hrot: Hrot_
     }
 }

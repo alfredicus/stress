@@ -47,7 +47,7 @@ export class OptimisationDirectGenSetSearch implements SearchMethod {
                 }
 
             } else if (Iteration === 'Unsuccessful') {
-                // The previous trials in the set of oordinate dircections G and in the octant-bisectors set are not 'descent' directions; therefore the iteration is UNSUCCESFUL.
+                // The previous trials in the set of coordinate dircections G and in the octant-bisectors set are not 'descent' directions; therefore the iteration is UNSUCCESFUL.
 
                 // The step-length control parameters are reduced accordingly.
                 this.stepLengthAngle = this.stepLengthAngle / 2
@@ -67,7 +67,7 @@ export class OptimisationDirectGenSetSearch implements SearchMethod {
         // Calculate the misfit function for trial stress tensors defined by a step-length angle in the directions of the rotation angles (alpha, beta, gamma).
         //      Rotation directions are defined by a subset of the Generating set search G : {e1, e2, e3, -e1, -e2,-e3}
         //      Rotation angles are defined around the principal stress directions of the current stress tensor solution (i.e. defined in the 'winning' reference frame Sw)
-        //      Note that step-length angles ae always small relative to maximum rotation angles [-2 PI, 2 PI] 
+        //      Note that step-length angles are always small relative to maximum rotation angles [-2 PI, 2 PI] 
 
         // Urot[1][1], Urot[1][2] = Rotation tensors definning a step-length angle in search directions e1 and -e1 (rotation angle alpha around X1) ('U' stands for 'update' solution)
         Urot[1][1] = Ualpha(stepLengthAngle)

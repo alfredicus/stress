@@ -17,13 +17,21 @@ import { toInt } from "../utils"
 export class StriatedPlaneKin extends Data {
     protected nPlane: Vector3 = undefined
     protected nStriation: Vector3 = undefined
-    protected pos: Vector3 = undefined
+    // protected pos: Vector3 = undefined
     protected problemType = StriatedPlaneProblemType.DYNAMIC
     protected strategy = FractureStrategy.ANGLE
     protected oriented = true
     protected EPS = 1e-7
     protected nPerpStriation: Vector3
     protected noPlane = 0
+
+    get planeNormal() {
+        return this.nPlane
+    }
+
+    get striationVector() {
+        return this.nStriation
+    }
 
     initialize(args: Tokens[]): DataStatus {
         const toks = args[0]
@@ -58,14 +66,14 @@ export class StriatedPlaneKin extends Data {
         return result
     }
 
-    check({ displ, strain, stress }: { displ: Vector3, strain: Matrix3x3, stress: Matrix3x3 }): boolean {
+    check({ displ, strain, stress }: { displ?: Vector3, strain?: Matrix3x3, stress?: Matrix3x3 }): boolean {
         if (this.problemType === StriatedPlaneProblemType.DYNAMIC) {
             return stress !== undefined
         }
         return displ !== undefined
     }
 
-    cost({ displ, strain, stress }: { displ: Vector3, strain: HypotheticalSolutionTensorParameters, stress: HypotheticalSolutionTensorParameters }): number {
+    cost({ displ, strain, stress }: { displ?: Vector3, strain?: HypotheticalSolutionTensorParameters, stress?: HypotheticalSolutionTensorParameters }): number {
         if (this.problemType === StriatedPlaneProblemType.DYNAMIC) {
             // For the first implementation, use the W&B hyp.
             // let d = tensor_x_Vector({T: stress, V: this.nPlane}) // Cauchy

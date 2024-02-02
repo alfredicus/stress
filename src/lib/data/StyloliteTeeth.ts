@@ -61,7 +61,7 @@ export class StyloliteTeeth extends StyloliteInterface {
         // The unit vector 'normal' is parallel to the stylolite teeth:
         //      'normal' can be considered to be equivalent to the perpendicular vector to a stylolite interface
         // The misfit is a normalized function of the angle between the 'normal' and the hypothetical stress axis Sigma 1 
-        this.normal = trendPlunge2unitAxis({ trend: this.stylolite_teeth_trend, plunge: this.stylolite_teeth_plunge })
+        this.nPlane = trendPlunge2unitAxis({ trend: this.stylolite_teeth_trend, plunge: this.stylolite_teeth_plunge })
 
         return result
     }

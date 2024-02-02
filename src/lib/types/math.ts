@@ -1,4 +1,17 @@
+import { assertCloseTo, assertNormalizedVector } from "../debug"
 import { SphericalCoords } from "./SphericalCoords"
+
+export const Sqrt2 = Math.sqrt(2)
+export const Sqrt2Over2 = Sqrt2/2
+
+export const Pi = Math.PI
+export const TwoPi = Math.PI * 2
+export const HalfPi = Math.PI / 2
+export const PiOverFour = Math.PI / 4
+
+export function rand(start = 0, end = 1) {
+    return start + Math.random() * (end - start)
+}
 
 /**
  * @category Math
@@ -22,7 +35,7 @@ export type Matrix3x3 = [[number, number, number], [number, number, number], [nu
 
 
 export function displayMatrix3x3(msg: string, m: Matrix3x3) {
-    console.log(msg,":")
+    console.log(msg, ":")
     console.log(m[0][0], m[0][1], m[0][2])
     console.log(m[1][0], m[1][1], m[1][2])
     console.log(m[2][0], m[2][1], m[2][2])
@@ -79,11 +92,20 @@ export const rad2deg = (a: number): number => a / Math.PI * 180
  */
 export function vectorMagnitude(vector: Vector3): number {
     // Calculate the magnitude of the vector
-    let magVector = Math.sqrt(vector[0] ** 2 + vector[1] ** 2 + vector[2] ** 2)
-    return magVector
+    return Math.sqrt(vector[0] ** 2 + vector[1] ** 2 + vector[2] ** 2)
+}
+
+export function norm(v: Vector3) {
+    return vectorMagnitude(v)
+}
+
+export function norm2(vector: Vector3): number {
+    // Calculate the magnitude of the vector
+    return vector[0] ** 2 + vector[1] ** 2 + vector[2] ** 2
 }
 
 /**
+ * If norm is provided, then the vector is divided by the norm
  * @category Math
  */
 export function normalizeVector(vector: Vector3, norm?: number): Vector3 {
@@ -172,7 +194,7 @@ export function add_Vectors(
 export function scalarProduct(
     { U, V }:
         { U: Vector3, V: Vector3 }): number {
-    // Pre-multply tensor T by vector V
+    // 
     const UdotV = U[0] * V[0] + U[1] * V[1] + U[2] * V[2]
 
     return UdotV
@@ -181,10 +203,10 @@ export function scalarProduct(
 /**
  * @category Math
  */
-export function scalarProductUnitVectors(
-    { U, V }:
-        { U: Vector3, V: Vector3 }): number {
-    // Pre-multply tensor T by vector V
+export function scalarProductUnitVectors({ U, V }: { U: Vector3, V: Vector3 }): number {
+    assertNormalizedVector(U)
+    assertNormalizedVector(V)
+
     let UdotV = U[0] * V[0] + U[1] * V[1] + U[2] * V[2]
 
     // The scalar product of unit vectors: -1 <= UdotV <= 1
@@ -238,9 +260,9 @@ export function crossProduct(
  * ```
  * @category Math
  */
-export function normalizedCrossProduct({ U, V }:{ U: Vector3, V: Vector3 }): Vector3 {
+export function normalizedCrossProduct({ U, V }: { U: Vector3, V: Vector3 }): Vector3 {
     let W: Vector3
-    W = crossProduct({U,V})
+    W = crossProduct({ U, V })
     return normalizeVector(W)
 }
 
@@ -314,25 +336,24 @@ export function rotationParamsFromRotTensor(rotTensor: Matrix3x3): { rotAxis: Ve
         rotMag
     }
 }
+// /**
+//  * @category Math
+//  */
+// export function normalVector(
+//     { phi, theta }:
+//         { phi: number, theta: number }): Vector3 {
+//     /** 
+//      * Define unit vector normal to the fault plane in the upper hemisphere (pointing upward) from angles in spherical coordinates.
+//      * The normal vector is constant for each fault plane and is defined in the geographic reference system: S = (X,Y,Z)
+//     */
+//     let normal = newVector3D() // ***
 
-/**
- * @category Math
- */
-export function normalVector(
-    { phi, theta }:
-        { phi: number, theta: number }): Vector3 {
-    /** 
-     * Define unit vector normal to the fault plane in the upper hemisphere (pointing upward) from angles in spherical coordinates.
-     * The normal vector is constnat for each fault plane and is defined in the geographic reference system: S = (X,Y,Z)
-    */
-    let normal = newVector3D() // ***
+//     normal[0] = Math.sin(phi) * Math.cos(theta)
+//     normal[1] = Math.sin(phi) * Math.sin(theta)
+//     normal[2] = Math.cos(phi)
 
-    normal[0] = Math.sin(phi) * Math.cos(theta)
-    normal[1] = Math.sin(phi) * Math.sin(theta)
-    normal[2] = Math.cos(phi)
-
-    return normal
-}
+//     return normal
+// }
 
 /**
  * @category Math
@@ -404,7 +425,7 @@ export function unitVectorCartesian2Spherical(V: Vector3, EPS = 1e-7): Spherical
  */
 export function properRotationTensor({ nRot, angle }:
     { nRot: Vector3, angle: number }): Matrix3x3 {
-    // Calculate the proper rotation tensor psi corresponding to a rotation angle around a unit axis nRot
+    // Calculate the proper rotation tensor psi corresponding to an anticlockwise rotation angle around a unit axis nRot
     // Psi allows to calculate the new coords of a vector undergoing a given rotation
 
     const PsiRot: Matrix3x3 = newMatrix3x3()
@@ -450,11 +471,11 @@ export function minRotAngleRotationTensor(rotTensor: Matrix3x3, EPS = 1e-7): num
 
     let traceRotTensor: number[] = new Array(4)
     // The trace of the first rotation tensor such that reference system Sb0 = (Xb, Yb, Zb)
-    traceRotTensor[0] =   rotTensor[0][0] + rotTensor[1][1] + rotTensor[2][2]
+    traceRotTensor[0] = rotTensor[0][0] + rotTensor[1][1] + rotTensor[2][2]
     // The trace of the second rotation tensor such that reference system Sb1 = (Xb, -Yb, -Zb)
     // System Sb1 is obtained by rotating Sb0 at an angle of PI around Xb
     // Note that Sb1 is right-handed and its principal axes are parallel to (Sigma 1, Sigma 3, Sigma 2)
-    traceRotTensor[1] =   rotTensor[0][0] - rotTensor[1][1] - rotTensor[2][2]
+    traceRotTensor[1] = rotTensor[0][0] - rotTensor[1][1] - rotTensor[2][2]
     // The trace of the second rotation tensor such that reference system Sb2 = (-Xb, Yb, -Zb)
     // System Sb2 is obtained by rotating Sb0 at an angle of PI around Yb
     // Note that Sb2 is right-handed and its principal axes are parallel to (Sigma 1, Sigma 3, Sigma 2)
@@ -464,23 +485,23 @@ export function minRotAngleRotationTensor(rotTensor: Matrix3x3, EPS = 1e-7): num
     // Note that Sb3 is right-handed and its principal axes are parallel to (Sigma 1, Sigma 3, Sigma 2)
     traceRotTensor[3] = - rotTensor[0][0] - rotTensor[1][1] + rotTensor[2][2]
 
-    const max = traceRotTensor.reduce( (cur, v) => Math.max(cur, v) , Number.NEGATIVE_INFINITY)
-    let cosMinRotAngle = ( max - 1 ) / 2
+    const max = traceRotTensor.reduce((cur, v) => Math.max(cur, v), Number.NEGATIVE_INFINITY)
+    let cosMinRotAngle = (max - 1) / 2
 
-    if ( Math.abs( cosMinRotAngle ) > 1 ) {
-        if (Math.abs( cosMinRotAngle ) > 1 + EPS ) {
+    if (Math.abs(cosMinRotAngle) > 1) {
+        if (Math.abs(cosMinRotAngle) > 1 + EPS) {
             throw new Error(`The cosine of the minimum rotation angle of the rotation tensor is not in the unit interval`)
         }
-        cosMinRotAngle = setValueInUnitInterval( cosMinRotAngle )
+        cosMinRotAngle = setValueInUnitInterval(cosMinRotAngle)
     }
 
-    return Math.acos( cosMinRotAngle )
+    return Math.acos(cosMinRotAngle)
 }
 
 /**
  * @category Math
  */
-export function rotationTensor_Sa_Sb( { Xb, Yb, Zb } : { Xb: Vector3, Yb: Vector3, Zb: Vector3 } ): Matrix3x3 {
+export function rotationTensor_Sa_Sb({ Xb, Yb, Zb }: { Xb: Vector3, Yb: Vector3, Zb: Vector3 }): Matrix3x3 {
     // Calculate the rotation tensor rotTensor between two reference systems Sa and Sb, such that:
     //  Vb = rotTensor  Va
     //  Va = rotTensorT Vb        (rotTensorT is tensor rotTensor transposed)
@@ -513,7 +534,7 @@ export function rotationTensor_Sa_Sb( { Xb, Yb, Zb } : { Xb: Vector3, Yb: Vector
     return rotTensor
 }
 
-export function trendPlunge2unitAxis( { trend, plunge } : { trend: number, plunge: number } ): Vector3 {
+export function trendPlunge2unitAxis({ trend, plunge }: { trend: number, plunge: number }): Vector3 {
     // (phi,theta) : spherical coordinate angles defining the unit vector parallel to a micro/meso structure (e.g., Crystal Fibers in Vein or styloilte teeth).
     //               in the geographic reference system: S = (X,Y,Z) = (E,N,Up)
 
@@ -525,17 +546,17 @@ export function trendPlunge2unitAxis( { trend, plunge } : { trend: number, plung
     const unitAxis = newVector3D() as Vector3
 
     // The polar angle (or colatitude) theta is calculated in radians from the plunge of the Crystal Fibers :
-    coordinates.theta = deg2rad( this.plunge ) + Math.PI / 2
+    coordinates.theta = deg2rad(this.plunge) + Math.PI / 2
 
     // The azimuthal angle is calculated in radians from the trend of the Crystal Fibers :
     //      trend + phi = PI / 2 
-    coordinates.phi = deg2rad( 90 - this.trend )
+    coordinates.phi = deg2rad(90 - this.trend)
 
-    if  ( this.crystal_fibers_trend > 90 ) {
+    if (this.crystal_fibers_trend > 90) {
         // phi < 0
         coordinates.phi = coordinates.phi + 2 * Math.PI
     }
     // The unit vector parallel to the Crystal Fibers is defined by angles (phi, theta) in spherical coordinates.
     // normal: unit vector parallel to the Crystal Fibers in Vein defined in the geographic reference system: S = (X,Y,Z)
-    return spherical2unitVectorCartesian(coordinates)       
+    return spherical2unitVectorCartesian(coordinates)
 }

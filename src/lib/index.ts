@@ -6,4 +6,3 @@ export * from './search'
 export * from './io'
 
 export * from './InverseMethod'
-
