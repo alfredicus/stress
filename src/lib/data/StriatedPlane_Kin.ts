@@ -25,7 +25,7 @@ export class StriatedPlaneKin extends Data {
     protected nPerpStriation: Vector3
     protected noPlane = 0
 
-    get planeNormal() {
+    get normal() {
         return this.nPlane
     }
 

@@ -3,6 +3,8 @@ import { SphericalCoords } from "./SphericalCoords"
 
 export const Sqrt2 = Math.sqrt(2)
 export const Sqrt2Over2 = Sqrt2/2
+export const OneOverSqrt3 = 1/Math.sqrt(3)
+export const Sqrt3Over2 = Math.sqrt(3)/2
 
 export const Pi = Math.PI
 export const TwoPi = Math.PI * 2
