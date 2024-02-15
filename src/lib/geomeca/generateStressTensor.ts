@@ -1,6 +1,9 @@
-import { eigen } from "@youwol/math"
 import { assertBetween } from "../debug"
-import { Matrix3x3, SphericalCoords, multiplyTensors, newMatrix3x3Identity, properRotationTensor, spherical2unitVectorCartesian, transposeTensor } from "../types"
+import {
+    Matrix3x3, SphericalCoords, multiplyTensors, newMatrix3x3Identity,
+    properRotationTensor, spherical2unitVectorCartesian,
+    transposeTensor, eigen
+} from "../types"
 import { HypotheticalSolutionTensorParameters } from "./HypotheticalSolutionTensorParameters"
 import { fromRotationsToTensor } from "./fromRotationsToTensor"
 import { HomogeneousEngine } from "./HomogeneousEngine"
@@ -60,16 +63,27 @@ export function generateStressTensor(phi: number, theta: number, angle: number, 
 }
 
 export function generateStressTensorFromTensor(s: Matrix3x3): HypotheticalSolutionTensorParameters {
-    const { values, vectors } = eigen([s[0][0], s[0][1], s[0][2], s[1][1], s[1][2], s[2][2]])
-    return {
-        // eigen calculates the 3 eigenvectors and eigenvalues in the following order: Sigma_3, Sigma_2, Sigma_1
+    /**
+     * See ../utils/math.ts for the modified version of eigen from @youwol/math
+     */
+    const eigenObject = eigen(s)
+
+    const Hrot_RH: Matrix3x3 = [
+        eigenObject.S1,
+        eigenObject.S3,
+        eigenObject.S2
+    ]
+
+    return new HypotheticalSolutionTensorParameters({
+        // Our reference system Sh = (Xh, Yh, Zh) = (S1_X, S3_Y, S2_Z), is Right-Handed 
         S: s,
-        S1_X: [vectors[6], vectors[7], vectors[8]],
-        S3_Y: [vectors[0], vectors[1], vectors[2]],
-        S2_Z: [vectors[3], vectors[4], vectors[5]],
-        s1_X: values[2],
-        s3_Y: values[0],
-        s2_Z: values[1],
+        S1_X: eigenObject.S1,
+        S3_Y: eigenObject.S3,
+        S2_Z: eigenObject.S2,
+
+        s1_X: eigenObject.s1,
+        s3_Y: eigenObject.s3,
+        s2_Z: eigenObject.s2,
 
         // The reference systmem corresponding to the hypothetical solution is defined by
         //      Sh = (Xh, Yh, Zh) = (Sigma_1, Sigma_3, Sigma_2) acccording to a strike-slip regime
@@ -84,12 +98,9 @@ export function generateStressTensorFromTensor(s: Matrix3x3): HypotheticalSoluti
 
         // The rows of matrix Hrot are defined by the normalized eigenvectors Sigma_1, Sigma_3, Sigma_2 
         // This reference system is in principle right-handed
-        Hrot: [
-            [vectors[6], vectors[7], vectors[8]],
-            [vectors[0], vectors[1], vectors[2]],
-            [vectors[3], vectors[4], vectors[5]]
-        ]
-    }
+
+        Hrot: Hrot_RH
+    })
 }
 
 export function generateStressTensorFromHRot(Hrot: Matrix3x3, R: number): HypotheticalSolutionTensorParameters {

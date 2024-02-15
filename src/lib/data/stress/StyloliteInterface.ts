@@ -1,12 +1,10 @@
-import { Matrix3x3, scalarProductUnitVectors, Vector3 } from "../types"
-import { fromAnglesToNormal } from "../utils/fromAnglesToNormal"
-import { Data } from "./Data"
-import { Tokens, FractureStrategy } from "./types"
-import { HypotheticalSolutionTensorParameters } from "../geomeca"
-import { Direction, toInt } from "../utils"
-import { createDataArgument, createDataStatus, DataArgument, DataDescription, DataStatus } from "./DataDescription"
-import { DataFactory } from "./Factory"
-import { decodePlane } from "../utils/PlaneHelper"
+import { Matrix3x3, scalarProductUnitVectors, Vector3 } from "../../types"
+import { fromAnglesToNormal } from "../../utils/fromAnglesToNormal"
+import { Tokens, FractureStrategy } from "../types"
+import { Engine, HypotheticalSolutionTensorParameters } from "../../geomeca"
+import { DataStatus } from "../DataDescription"
+import { decodePlane } from "../../utils/PlaneHelper"
+import { FractureData } from "./FractureData"
 
 /**
  * 
@@ -20,14 +18,8 @@ import { decodePlane } from "../utils/PlaneHelper"
  * @category Data
  */
   
- export class StyloliteInterface extends Data {
-    // protected normal: Vector3 = [0,0,0]
-    protected nPlane: Vector3 = undefined
+ export class StyloliteInterface extends FractureData {
     protected strategy: FractureStrategy = FractureStrategy.ANGLE
-
-    get normal() {
-        return this.nPlane
-    }
 
     // description(): any {
     //     return {
@@ -82,9 +74,10 @@ import { decodePlane } from "../utils/PlaneHelper"
         }
     }
 
-    predict({ displ, strain, stress }: { displ?: Vector3; strain?: HypotheticalSolutionTensorParameters; stress?: HypotheticalSolutionTensorParameters }): number {
-        const dot = scalarProductUnitVectors({U: stress.S1_X, V: this.normal})
-        return Math.acos( Math.abs(dot) ) / Math.PI
+    predict(engine: Engine, { displ, strain, stress }: { displ?: Vector3; strain?: HypotheticalSolutionTensorParameters; stress?: HypotheticalSolutionTensorParameters }) {
+        return engine.stress(this.position).S1_X
+        // const dot = scalarProductUnitVectors({U: stress.S1_X, V: this.normal})
+        // return Math.acos( Math.abs(dot) ) / Math.PI
     }
 
 }

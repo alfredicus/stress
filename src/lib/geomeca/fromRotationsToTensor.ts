@@ -14,7 +14,7 @@ export function fromRotationsToTensor(Hrot: Matrix3x3, stressRatio: number): Hyp
     // The corresponding eigenvalues (sigma1_Sh, sigma3_Sh, sigma2_Sh) in system Sh defined in terms of the normalized Mohr-Circle diagram: 
     //      Stress ratio is defined either by the user in the interactive search, or in the search method (e.g. Montecarlo)
     // The principal stress values are NEGATIVE (compressive) since stress calculations are done using the CONTINUUM MECHANICS CONVENTION (e.g., search/utils.ts).
-    const values = [-1, 0, -stressRatio_]
+    const stressValues_XYZ_H = [-1, 0, -stressRatio_]
 
     const HrotT = transposeTensor(Hrot_)
     const S_ = stressTensorDelta(stressRatio, Hrot_, HrotT)
@@ -25,7 +25,7 @@ export function fromRotationsToTensor(Hrot: Matrix3x3, stressRatio: number): Hyp
     /*
     const {values, vectors} = eigen(sigma)
     this.S1 = [vectors[0], vectors[1], vectors[2]] as Vector3
-    this.S2 = [vectors[3], vectors[4], vectors[5]] as Vector3
+    this.S2 = [-vectors[3], -vectors[4], -vectors[5]] as Vector3
     this.S3 = [vectors[6], vectors[7], vectors[8]] as Vector3
     this.values = [...values] as Vector3
     */
@@ -56,14 +56,14 @@ export function fromRotationsToTensor(Hrot: Matrix3x3, stressRatio: number): Hyp
     //      Vw = Wrot  V
     //      V  = WTrot Vw        (WTrot is tensor Wrot transposed)
 
-    return {
+    return new HypotheticalSolutionTensorParameters({
         S: S_,
         S1_X: S1_Xh,
         S3_Y: S3_Yh,
         S2_Z: S2_Zh,
-        s1_X: values[0],
-        s3_Y: values[2],
-        s2_Z: values[1],
+        s1_X: stressValues_XYZ_H[0],
+        s3_Y: stressValues_XYZ_H[1],
+        s2_Z: stressValues_XYZ_H[2],
         Hrot: Hrot_
-    }
+    })
 }

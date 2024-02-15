@@ -125,7 +125,7 @@ export class NeoformedStriatedPlane extends Data {
         const toks = args[0]
         this.toks = toks
         let result = createDataStatus()
-        const arg: DataArgument = createDataArgument()
+        const arg: DataArgument = createDataArgument(toks)
 
         // -----------------------------------
         // Read parameters definning plane orientation, striation orientation and type of movement

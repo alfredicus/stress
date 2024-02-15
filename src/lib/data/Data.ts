@@ -1,18 +1,19 @@
+import { Engine } from "../geomeca"
 import { HypotheticalSolutionTensorParameters } from "../geomeca/HypotheticalSolutionTensorParameters"
 import { Matrix3x3, Point3D, Vector3 } from "../types/math"
 import { DataStatus } from "./DataDescription"
+import { DataParameters } from "./DataParameters"
 import { Tokens } from "./types"
 
 /**
  * @brief A Data represents one and only one measure
  * @category Data
  */
-export abstract class Data  {
+export abstract class Data {
     protected weight_: number = 1
     protected active_ = true
-    protected pos: Point3D = [0,0,0]
+    protected pos: Point3D = [0, 0, 0]
     private toks_: Tokens = undefined
-    //private userSpace_ : UserSpace = UserSpace.INVERSE
 
     get position(): Point3D {
         return this.pos
@@ -38,11 +39,6 @@ export abstract class Data  {
         this.toks_ = [...t]
     }
 
-    // description(): any {
-    //     // return undefined
-    //     throw new Error('Method does not exist anymore')
-    // }
-    
     setOptions(options: { [key: string]: any }): boolean {
         return false
     }
@@ -54,8 +50,11 @@ export abstract class Data  {
     /**
      * Replace the constructor
      */
-    //abstract initialize(params: DataParameters[]): boolean
     abstract initialize(args: Tokens[]): DataStatus
+    
+    __initialize__(params: DataParameters): DataStatus {
+        return undefined
+    }
 
     /**
      * @brief Check the consistency of the datum
@@ -73,18 +72,12 @@ export abstract class Data  {
      * @param options.stress The computed stress tensor if any
      * @param options.strain The computed strain tensor if any
      */
-    // abstract cost(
-    //     { displ, strain, stress, rot }:
-    //     { displ?: Vector3, strain?: Matrix3x3, stress?: Matrix3x3, rot?: Matrix3x3 }): number
-
     abstract cost(
         { displ, strain, stress }:
-        { displ?: Vector3, strain?: HypotheticalSolutionTensorParameters, stress?: HypotheticalSolutionTensorParameters }): number
+            { displ?: Vector3, strain?: HypotheticalSolutionTensorParameters, stress?: HypotheticalSolutionTensorParameters }): number
 
     /**
      * After stress inversion, get the infered data orientation/magnitude/etc for this specific Data
      */
-    predict({ displ, strain, stress }: { displ?: Vector3, strain?: HypotheticalSolutionTensorParameters, stress?: HypotheticalSolutionTensorParameters }): any {
-        return undefined
-    }
+    abstract predict(engine: Engine, { displ, strain, stress }: { displ?: Vector3, strain?: HypotheticalSolutionTensorParameters, stress?: HypotheticalSolutionTensorParameters }): any
 }

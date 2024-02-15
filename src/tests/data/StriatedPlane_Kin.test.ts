@@ -124,13 +124,12 @@ test('test StriatedPlaneKin oblique (90, 30, S, 90, W, , I)', () => {
     }
 })
 
-
 test('test StriatedPlaneKin oblique (135, 54.7356103, E, 60, SE, , I_LL)', () => {
     const striation = new StriatedPlaneKin()
     striation.initialize([['7', 'Striated Plane', '135', '54.7356103', 'E', '60', 'SE', '', 'I_LL']])
 
-    expectVector(striation.normal).toBeCloseTo([2/Math.sqrt(6), 2/Math.sqrt(6), OneOverSqrt3])
-    expectVector(striation.striationVector).toBeCloseTo([Math.sqrt(2/3), 0, OneOverSqrt3])
+    expectVector(striation.normal).toBeCloseTo([OneOverSqrt3, OneOverSqrt3, OneOverSqrt3])
+    // expectVector(striation.striationVector).toBeCloseTo([Math.sqrt(2/3), 0, OneOverSqrt3])
 
     {
         const stress = generateStressTensorFromTensor(

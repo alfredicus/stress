@@ -1,15 +1,18 @@
-import { assertCloseTo, assertNormalizedVector } from "../debug"
+import { eigen as EIGEN } from "@youwol/math"
+import { assertNormalizedVector } from "../debug"
 import { SphericalCoords } from "./SphericalCoords"
 
 export const Sqrt2 = Math.sqrt(2)
 export const Sqrt2Over2 = Sqrt2/2
+export const Sqrt2Over4 = Sqrt2/4
 export const OneOverSqrt3 = 1/Math.sqrt(3)
 export const Sqrt3Over2 = Math.sqrt(3)/2
 
 export const Pi = Math.PI
 export const TwoPi = Math.PI * 2
 export const HalfPi = Math.PI / 2
-export const PiOverFour = Math.PI / 4
+export const PiOver3 = Math.PI / 3
+export const PiOver4 = Math.PI / 4
 
 export function rand(start = 0, end = 1) {
     return start + Math.random() * (end - start)
@@ -193,13 +196,8 @@ export function add_Vectors(
 /**
  * @category Math
  */
-export function scalarProduct(
-    { U, V }:
-        { U: Vector3, V: Vector3 }): number {
-    // 
-    const UdotV = U[0] * V[0] + U[1] * V[1] + U[2] * V[2]
-
-    return UdotV
+export function scalarProduct({ U, V }:{ U: Vector3, V: Vector3 }): number {
+    return U[0] * V[0] + U[1] * V[1] + U[2] * V[2]
 }
 
 /**
@@ -561,4 +559,32 @@ export function trendPlunge2unitAxis({ trend, plunge }: { trend: number, plunge:
     // The unit vector parallel to the Crystal Fibers is defined by angles (phi, theta) in spherical coordinates.
     // normal: unit vector parallel to the Crystal Fibers in Vein defined in the geographic reference system: S = (X,Y,Z)
     return spherical2unitVectorCartesian(coordinates)
+}
+
+/**
+ * Modified eigen from @youwol/math (same name)
+ */
+export function eigen(s: Matrix3x3) {
+    const { values, vectors } = EIGEN([s[0][0], s[0][1], s[0][2], s[1][1], s[1][2], s[2][2]])
+
+    // eigen calculates the 3 eigenvectors and eigenvalues in the following order: Sigma_3, Sigma_2, Sigma_1
+    // The eigen vectors are UNIT vectors, which are NOT necessarily defined in a right-handed reference system
+  
+    // Generate a Right-Handed reference system for reference system Sh = (Xh, Yh, Zh) = (Sigma_1, Sigma_3, Sigma_2) from the unitary eigenvectors 
+    const S1 : Vector3 = [vectors[6], vectors[7], vectors[8]]
+    const S3 : Vector3 = [vectors[0], vectors[1], vectors[2]]
+    const S2 : Vector3 = crossProduct({ U: S1, V: S3 }) //----------- compare this vector with corresponding eigenvector, i.e., it may be inverted
+
+    const s1 = values[2]
+    const s3 = values[0]
+    const s2 = values[1]
+
+    return {
+        S1,
+        S2,
+        S3,
+        s1,
+        s2,
+        s3
+    }
 }

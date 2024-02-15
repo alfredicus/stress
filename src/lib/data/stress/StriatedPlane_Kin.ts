@@ -1,45 +1,35 @@
-import { Matrix3x3, normalizeVector, scalarProductUnitVectors, Vector3 } from "../types"
-import { Data } from "./Data"
-import { faultStressComponents } from "../types/mechanics"
+import { Matrix3x3, normalizeVector, scalarProductUnitVectors, Vector3 } from "../../types"
+import { faultStressComponents } from "../../types/mechanics"
 import {
     FaultHelper, Direction, TypeOfMovement, getDirectionFromString,
     directionExists, getTypeOfMovementFromString, sensOfMovementExists
-} from "../utils/FaultHelper"
-import { Tokens, FractureStrategy, StriatedPlaneProblemType, createPlane, createStriation } from "./types"
-import { HypotheticalSolutionTensorParameters } from "../geomeca"
-import { createDataArgument, createDataStatus, DataStatus } from "./DataDescription"
-import { readStriatedFaultPlane } from "../io/DataReader"
-import { toInt } from "../utils"
+} from "../../utils/FaultHelper"
+import { Tokens, FractureStrategy, StriatedPlaneProblemType, createPlane, createStriation } from "../types"
+import { Engine, HypotheticalSolutionTensorParameters } from "../../geomeca"
+import { createDataArgument, createDataStatus, DataStatus } from "../DataDescription"
+import { readStriatedFaultPlane } from "../../io/DataReader"
+import { toInt } from "../../utils"
+import { FaultData } from "./FaultData"
 
 /**
  * @category Data
  */
-export class StriatedPlaneKin extends Data {
-    protected nPlane: Vector3 = undefined
-    protected nStriation: Vector3 = undefined
-    // protected pos: Vector3 = undefined
+export class StriatedPlaneKin extends FaultData {
     protected problemType = StriatedPlaneProblemType.DYNAMIC
     protected strategy = FractureStrategy.ANGLE
     protected oriented = true
     protected EPS = 1e-7
+    protected epsMagnitude = 1e-3
     protected nPerpStriation: Vector3
     protected noPlane = 0
-
-    get normal() {
-        return this.nPlane
-    }
-
-    get striationVector() {
-        return this.nStriation
-    }
 
     initialize(args: Tokens[]): DataStatus {
         const toks = args[0]
         this.toks = args[0]
         const result = createDataStatus()
-        const arg = createDataArgument()
-        arg.toks = toks
-        arg.index = toInt(toks[0])
+        const arg = createDataArgument(toks)
+        // arg.toks = toks
+        // arg.index = toInt(toks[0])
 
         // Read parameters definning plane orientation, striation orientation and type of movement
         const plane = createPlane()
@@ -86,7 +76,7 @@ export class StriatedPlaneKin extends Data {
             const { shearStress, normalStress, shearStressMag } = faultStressComponents({ stressTensor: stress.S, normal: this.nPlane })
             let cosAngularDifStriae = 0
 
-            if (shearStressMag > 0) { // shearStressMag > Epsilon would be more realistic ***
+            if (shearStressMag > this.epsMagnitude) { // shearStressMag > Epsilon would be more realistic ***
                 // nShearStress = unit vector parallel to the shear stress (i.e. representing the calculated striation)
                 let nShearStress = normalizeVector(shearStress, shearStressMag)
                 // The angular difference is calculated using the scalar product: 
@@ -125,36 +115,26 @@ export class StriatedPlaneKin extends Data {
         throw new Error('Kinematic not yet available')
     }
 
-    predict({ displ, strain, stress }: { displ?: Vector3; strain?: HypotheticalSolutionTensorParameters; stress?: HypotheticalSolutionTensorParameters }): number {
+    /**
+     * Computed optimal normal and striation vectors for a given stress tensor.
+     * Only called when the solution is found.
+     */
+    predict(engine: Engine, { displ, strain, stress }: { displ?: Vector3; strain?: HypotheticalSolutionTensorParameters; stress?: HypotheticalSolutionTensorParameters }): {normal: Vector3, striation: Vector3} {
         const { shearStress, normalStress, shearStressMag } = faultStressComponents({ stressTensor: stress.S, normal: this.nPlane })
-        let cosAngularDifStriae = 0
 
-        if (shearStressMag > 0) { // shearStressMag > Epsilon would be more realistic ***
+        if (shearStressMag > this.epsMagnitude) {
             // nShearStress = unit vector parallel to the shear stress (i.e. representing the calculated striation)
-            let nShearStress = normalizeVector(shearStress, shearStressMag)
-            // The angular difference is calculated using the scalar product: 
-            // nShearStress . nStriation = |nShearStress| |nStriation| cos(angularDifStriae) = 1 . 1 . cos(angularDifStriae)
-            // cosAngularDifStriae = cos(angular difference between calculated and measured striae)
-            cosAngularDifStriae = scalarProductUnitVectors({ U: nShearStress, V: this.nStriation })
-
+            const nShearStress = normalizeVector(shearStress, shearStressMag)
+            return { 
+                normal: this.normal,
+                striation: nShearStress
+            }
         } else {
-            // The calculated shear stress is zero (i.e., the fault plane is parallel to a principal stress)
-            // In such situation we may consider that the calculated striation can have any direction.
-            // Nevertheless, the plane should not display striations as the shear stress is zero.
-            // Thus, in principle the plane is not compatible with the stress tensor, and it should be eliminated from the analysis
-            // In suchh case, the angular difference is taken as PI
-            cosAngularDifStriae = -1
-        }
-
-
-        // The misfit is defined by the angular difference (in radians) between measured and calculated striae
-        if (this.oriented) {
-            // The sense of the striation is known
-            return Math.acos(cosAngularDifStriae)
-        } else {
-            // The sense of the striation is not known. Thus, we choose the sens that minimizes the angular difference 
-            // and is more compatible with the observed striation.
-            return Math.acos(Math.abs(cosAngularDifStriae))
+            // throw `Data number ${this.toks[0]} of type "${this.toks[1]}": Magnitude of the shear stress is close to zero!`
+            return { 
+                normal: this.normal,
+                striation: [0,0,0]
+            }
         }
     }
 
@@ -172,28 +152,3 @@ export class StriatedPlaneKin extends Data {
         return getTypeOfMovementFromString(s)
     }
 }
-
-// ----------------------------------------------------
-
-/*
-const mapDirection = new Map<string, Direction>()
-mapDirection.set("E", Direction.E)
-mapDirection.set("N", Direction.N)
-mapDirection.set("NE", Direction.NE)
-mapDirection.set("NW", Direction.NW)
-mapDirection.set("S", Direction.S)
-mapDirection.set("SE", Direction.SE)
-mapDirection.set("SW", Direction.SW)
-mapDirection.set("W", Direction.W)
-
-const mapSensOfMovement = new Map<string, TypeOfMovement>()
-mapSensOfMovement.set("Inverse", TypeOfMovement.I)
-mapSensOfMovement.set("Inverse - Left Lateral", TypeOfMovement.I_LL)
-mapSensOfMovement.set("Inverse - Right Lateral", TypeOfMovement.I_RL)
-mapSensOfMovement.set("Left Lateral", TypeOfMovement.LL)
-mapSensOfMovement.set("Normal", TypeOfMovement.N)
-mapSensOfMovement.set("Normal - Left Lateral", TypeOfMovement.N_LL)
-mapSensOfMovement.set("Normal - Right Lateral", TypeOfMovement.N_RL)
-mapSensOfMovement.set("Right Lateral", TypeOfMovement.RL)
-mapSensOfMovement.set("Undefined", TypeOfMovement.UND)
-*/

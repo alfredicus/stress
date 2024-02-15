@@ -1,10 +1,10 @@
-import { Matrix3x3, scalarProductUnitVectors, Vector3 } from "../types"
-import { fromAnglesToNormal } from "../utils/fromAnglesToNormal"
-import { Data } from "./Data"
-import { FractureStrategy, Tokens } from "./types"
-import { HypotheticalSolutionTensorParameters } from "../geomeca"
-import { DataStatus } from "./DataDescription"
-import { decodePlane } from "../utils/PlaneHelper"
+import { Matrix3x3, scalarProductUnitVectors, Vector3 } from "../../types"
+import { fromAnglesToNormal } from "../../utils/fromAnglesToNormal"
+import { FractureStrategy, Tokens } from "../types"
+import { Engine, HypotheticalSolutionTensorParameters } from "../../geomeca"
+import { DataStatus } from "../DataDescription"
+import { decodePlane } from "../../utils/PlaneHelper"
+import { FractureData } from "./FractureData"
 
 /**
  * @brief Represent an observed and measured joint
@@ -16,13 +16,13 @@ import { decodePlane } from "../utils/PlaneHelper"
  *
  * @category Data
  */
-export class ExtensionFracture extends Data {
-    protected nPlane: Vector3 = undefined
+export class ExtensionFracture extends FractureData {
+    // protected nPlane: Vector3 = undefined
     protected strategy: FractureStrategy = FractureStrategy.ANGLE
 
-    get normal() {
-        return this.nPlane
-    }
+    // get normal() {
+    //     return this.nPlane
+    // }
 
     /*
     description(): any {
@@ -81,8 +81,9 @@ export class ExtensionFracture extends Data {
 
     // According to the tensor solution,
     // should return a normal or a set of 2 angles (e.g., dip and dip-azimuth)
-    predict({ displ, strain, stress }: { displ?: Vector3; strain?: HypotheticalSolutionTensorParameters; stress?: HypotheticalSolutionTensorParameters }): number {
-        const dot = scalarProductUnitVectors({ U: stress.S3_Y, V: this.nPlane })
-        return Math.acos(Math.abs(dot))
+    predict(engine: Engine, { displ, strain, stress }: { displ?: Vector3; strain?: HypotheticalSolutionTensorParameters; stress?: HypotheticalSolutionTensorParameters }) {
+        // const dot = scalarProductUnitVectors({ U: stress.S3_Y, V: this.nPlane })
+        // return Math.acos(Math.abs(dot))
+        return engine.stress(this.position).S3_Y
     }
 }
