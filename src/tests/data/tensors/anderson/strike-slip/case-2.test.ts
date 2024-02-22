@@ -1,4 +1,4 @@
-import { HalfPi, Matrix3x3, OneOverSqrt3, PiOver3, PiOver4, Sqrt2Over2, Sqrt2Over4, Sqrt3Over2 } from "../../../../../lib"
+import { HalfPi, Matrix3x3, OneOverSqrt3, Pi, PiOver3, PiOver4, Sqrt2Over2, Sqrt2Over4, Sqrt3Over2, Sqrt6Over4 } from "../../../../../lib"
 import { HypotheticalSolutionTensorParameters } from "../../../../../lib/geomeca"
 import { generateStressTensor, generateStressTensorFromHRot, generateStressTensorFromTensor } from "../../../../../lib/geomeca/generateStressTensor"
 import { doTestStress } from "../../doTestStress"
@@ -12,29 +12,34 @@ export const datas = [
     ['2', 'Extension Fracture', '180', '90', 'W'],
     ['3', 'Stylolite Interface', '90', '90', ''],
     ['4', 'Stylolite Interface', '270', '90', 'N'],
-    ['5', 'Striated Plane', '90', '30', 'S', '90', 'W', '', 'I'],
-    ['6', 'Striated Plane', '270', '30', 'S', '90', 'E', '', 'I'],
-    ['7', 'Striated Plane', '150', '90', 'W', '0', 'E', '', 'RL'],
-    ['8', 'Striated Plane', '330', '90', 'S', '0', 'N', '', 'RL'],
-    ['9', 'Striated Plane', '45', '54.7356', 'W', '60', 'NE', '', 'LL'],
-    ['10', 'Striated Plane', '225', '54.7356', 'NW', '60', 'E', '', 'I'],
-    ['11', 'Striated Plane', '45', '54.7356', 'E', '60', 'SW', '', 'I'],
-    ['12', 'Striated Plane', '225', '54.7356', 'SE', '60', 'W', '', 'I_LL']
+    ['5', 'Striated Plane', '150', '90', 'NE', '0', 'NW', '', 'RL'],
+    ['6', 'Striated Plane', '330', '90', 'SW', '0', 'N', '', 'RL'],
+    ['7', 'Striated Plane', '90', '30', 'S', '90', 'W', '', 'I'],
+    ['8', 'Striated Plane', '270', '30', 'S', '90', 'E', '', 'I'],
+    ['9', 'Striated Plane', '0', '60', 'W', '90', 'N', '', 'N'],
+    ['10', 'Striated Plane', '180', '60', 'W', '90', 'S', '', 'N'],
+    ['11', 'Striated Plane', '135', '60', 'W', '0', 'NW', '', 'RL'],
+    ['12', 'Striated Plane', '315', '60', 'W', '0', 'S', '', 'RL'],
+    ['13', 'Striated Plane', '45', '30', 'SE', '0', 'NE', '', 'LL'],
+    ['14', 'Striated Plane', '225', '30', 'S', '0', 'S', '', 'LL']
+
 ]
 
 export const normals = [
-    [0, 0, 1],
-    [0, 0, 1],
+    [-1, 0, 0],
+    [1, 0, 0],
     [0, 1, 0],
     [0, -1, 0],
-    [0, -0.5, Sqrt3Over2],
-    [0, -0.5, Sqrt3Over2],
     [Sqrt3Over2, 0.5, 0],
-    [-Sqrt3Over2,- 0.5, 0],
-    [-OneOverSqrt3, OneOverSqrt3, OneOverSqrt3],
-    [-OneOverSqrt3, OneOverSqrt3, OneOverSqrt3],
-    [OneOverSqrt3, -OneOverSqrt3, OneOverSqrt3],
-    [OneOverSqrt3, -OneOverSqrt3, OneOverSqrt3]
+    [-Sqrt3Over2, -0.5, 0],
+    [0, -0.5, Sqrt3Over2],
+    [0, -0.5, Sqrt3Over2],
+    [-Sqrt3Over2, 0, 0.5],
+    [-Sqrt3Over2, 0, 0.5],
+    [-Sqrt6Over4, -Sqrt6Over4, 0.5],
+    [-Sqrt6Over4, -Sqrt6Over4, 0.5],
+    [Sqrt2Over4,-Sqrt2Over4, Sqrt3Over2],
+    [Sqrt2Over4,-Sqrt2Over4, Sqrt3Over2]
 ]
 
 const R = 0.5
@@ -45,8 +50,7 @@ const stressTensor = [
     [0, 0, -R]
 ]
 
-//const properRotationVector = [PiOver4, Math.acos(OneOverSqrt3), PiOver3, R]
-const properRotationVector = [PiOver4, , HalfPi, R]
+const properRotationVector = [PiOver4, HalfPi, Pi, R]
 
 const rotationMatrix = {
     rot: [[0, 1, 0],

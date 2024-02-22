@@ -15,7 +15,7 @@
         "doc": "typedoc src/ src/examples --exclude src/tests --media ./media --excludePrivate --disableSources --out generated-doc --includeVersion --hideGenerator",
         "publish-npm-public": "yarn build:prod && yarn test-coverage && yarn publish --access public",
         "test-debug": "node --inspect-brk node_modules/.bin/jest --runInBand --detectOpenHandles src/tests/inversion.test.ts",
-        "debug-chrome": "node --inspect-brk node_modules/.bin/jest --runInBand --detectOpenHandles src/tests/data/tensors/anderson/inverse/case-1.test.ts"
+        "debug-chrome": "node --inspect-brk node_modules/.bin/jest --runInBand --detectOpenHandles src/tests/data/tensors/anderson/normal/case-2.test.ts"
     },
     "dependencies": {
         "@youwol/dataframe": "^0.0.38",

@@ -7,6 +7,7 @@ export const Sqrt2Over2 = Sqrt2/2
 export const Sqrt2Over4 = Sqrt2/4
 export const OneOverSqrt3 = 1/Math.sqrt(3)
 export const Sqrt3Over2 = Math.sqrt(3)/2
+export const Sqrt6Over4 = Math.sqrt(6)/4
 
 export const Pi = Math.PI
 export const TwoPi = Math.PI * 2
