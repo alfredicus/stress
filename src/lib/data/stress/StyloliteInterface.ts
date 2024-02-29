@@ -1,10 +1,11 @@
 import { Matrix3x3, scalarProductUnitVectors, Vector3 } from "../../types"
 import { fromAnglesToNormal } from "../../utils/fromAnglesToNormal"
-import { Tokens, FractureStrategy } from "../types"
+import { FractureStrategy } from "../types"
 import { Engine, HypotheticalSolutionTensorParameters } from "../../geomeca"
 import { DataStatus } from "../DataDescription"
 import { decodePlane } from "../../utils/PlaneHelper"
 import { FractureData } from "./FractureData"
+import { setPositionIfAny } from "../../utils/assertJson"
 
 /**
  * 
@@ -35,10 +36,8 @@ import { FractureData } from "./FractureData"
     //     }
     // }
 
-    initialize(args: Tokens[]): DataStatus {
-        const toks = args[0]
-        this.toks = toks
-        const plane = decodePlane(toks)
+    initialize(obj: any): DataStatus {
+        const plane = decodePlane(obj)
 
         // Calculate the unit vector normal to the Plane
         this.nPlane = fromAnglesToNormal({
@@ -48,11 +47,7 @@ import { FractureData } from "./FractureData"
         })
 
         // Read position if any
-        if (toks.length>21) {
-            if (toks[19].length !== 0) this.pos[0] = parseFloat(toks[19])
-            if (toks[20].length !== 0) this.pos[1] = parseFloat(toks[20])
-            if (toks[21].length !== 0) this.pos[2] = parseFloat(toks[21])
-        }
+        setPositionIfAny(obj, this.pos)
 
         return plane.result
     }

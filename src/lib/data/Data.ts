@@ -3,7 +3,6 @@ import { HypotheticalSolutionTensorParameters } from "../geomeca/HypotheticalSol
 import { Matrix3x3, Point3D, Vector3 } from "../types/math"
 import { DataStatus } from "./DataDescription"
 import { DataParameters } from "./DataParameters"
-import { Tokens } from "./types"
 
 /**
  * @brief A Data represents one and only one measure
@@ -13,7 +12,7 @@ export abstract class Data {
     protected weight_: number = 1
     protected active_ = true
     protected pos: Point3D = [0, 0, 0]
-    private toks_: Tokens = undefined
+    private jsonObject_: any = undefined
 
     get position(): Point3D {
         return this.pos
@@ -31,12 +30,12 @@ export abstract class Data {
         return this.active_
     }
 
-    get toks(): Tokens {
-        return this.toks_
+    get objectData(): any {
+        return this.jsonObject_
     }
 
-    protected set toks(t: Tokens) {
-        this.toks_ = [...t]
+    protected set jsonObject(o: any) {
+        this.jsonObject_ = JSON.parse(JSON.stringify(o))
     }
 
     setOptions(options: { [key: string]: any }): boolean {
@@ -50,7 +49,7 @@ export abstract class Data {
     /**
      * Replace the constructor
      */
-    abstract initialize(args: Tokens[]): DataStatus
+    abstract initialize(jsonObject: any): DataStatus
     
     __initialize__(params: DataParameters): DataStatus {
         return undefined

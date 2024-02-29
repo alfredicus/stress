@@ -7,34 +7,108 @@ import { doTestStress } from "../../doTestStress"
 
 // Normal Regime, Tensor 1
 
-export const datas = [
-    ['1', 'Extension Fracture', '0', '90', 'W'],
-    ['2', 'Extension Fracture', '180', '90', 'E'],
-    ['3', 'Stylolite Interface', '0', '0', 'W'],
-    ['4', 'Stylolite Interface', '180', '0', 'W'],
-    ['5', 'Striated Plane', '0', '60', 'W', '90', 'N', '', 'N'],
-    ['6', 'Striated Plane', '180', '60', 'W', '90', 'S', '', 'N'],
-    ['7', 'Striated Plane', '90', '45', 'N', '90', 'W', '', 'N'],
-    ['8', 'Striated Plane', '270', '45', 'N', '90', 'E', '', 'N'],
-    ['9', 'Striated Plane', '60', '90', 'N', '0', 'S', '', 'LL'],
-    ['10', 'Striated Plane', '240', '90', 'N', '0', 'N', '', 'LL'],
-    ['11', 'Striated Plane', '45', '54.7356', 'SE', '60', 'NE', '', 'N_LL'],
-    ['12', 'Striated Plane', '225', '54.7356', 'S', '60', 'N', '', 'LL']
-]
-
-export const normals = [
-    [-1, 0, 0],
-    [1, 0, 0],
-    [0, 0, 1],
-    [0, 0, 1],
-    [-Sqrt3Over2, 0, 0.5],
-    [-Sqrt3Over2, 0, 0.5],
-    [0, Sqrt2Over2, Sqrt2Over2],
-    [0, Sqrt2Over2, Sqrt2Over2],
-    [-0.5, Sqrt3Over2, 0],
-    [0.5, -Sqrt3Over2, 0],
-    [OneOverSqrt3, -OneOverSqrt3, OneOverSqrt3],
-    [OneOverSqrt3, -OneOverSqrt3, OneOverSqrt3]
+const datas = [
+    {
+        type: "Extension Fracture",
+        id: [1, 2],
+        strike: [0, 180],
+        dip: [90, 90],
+        dipDirection: ['W', 'E'],
+        normal: [[-1, 0, 0], [1, 0, 0]]
+    },
+    {
+        id: 3,
+        type: "Stylolite Interface",
+        strike: 0,
+        dip: 0,
+        dipDirection: 'W',
+        normal: [0, 0, 1]
+    },
+    {
+        id: 4,
+        type: "Stylolite Interface",
+        strike: 180,
+        dip: 0,
+        dipDirection: 'W',
+        normal: [0, 0, 1]
+    },
+    {
+        id: [5, 6],
+        type: "Striated Plane",
+        strike: [0, 180],
+        dip: [60, 60],
+        dipDirection: ['W', 'W'],
+        rake: [90, 90],
+        strikeDirection: ['N', 'S'],
+        typeOfMovement: ['N', 'N'],
+        normal: [[-Sqrt3Over2, 0, 0.5], [-Sqrt3Over2, 0, 0.5]]
+    },
+    {
+        id: 7,
+        type: "Striated Plane",
+        strike: 90,
+        dip: 45,
+        dipDirection: 'N',
+        rake: 90,
+        strikeDirection: 'W',
+        typeOfMovement: 'N',
+        normal: [0, Sqrt2Over2, Sqrt2Over2]
+    },
+    {
+        id: 8,
+        type: "Striated Plane",
+        strike: 270,
+        dip: 45,
+        dipDirection: 'N',
+        rake: 90,
+        strikeDirection: 'E',
+        typeOfMovement: 'N',
+        normal: [0, Sqrt2Over2, Sqrt2Over2]
+    }, 
+    {
+        id: 9,
+        type: "Striated Plane",
+        strike: 60,
+        dip: 90,
+        dipDirection: 'N',
+        rake: 0,
+        strikeDirection: 'S',
+        typeOfMovement: 'LL',
+        normal: [-0.5, Sqrt3Over2, 0]
+    },
+    {
+        id: 10,
+        type: "Striated Plane",
+        strike: 240,
+        dip: 90,
+        dipDirection: 'N',
+        rake: 0,
+        strikeDirection: 'N',
+        typeOfMovement: 'LL',
+        normal: [0.5, -Sqrt3Over2, 0]
+    },
+    {
+        id: 11,
+        type: "Striated Plane",
+        strike: 45,
+        dip: 54.7356,
+        dipDirection: 'SE',
+        rake: 60,
+        strikeDirection: 'NE',
+        typeOfMovement: 'N_LL',
+        normal: [OneOverSqrt3, -OneOverSqrt3, OneOverSqrt3]
+    },
+    {
+        id: 12,
+        type: "Striated Plane",
+        strike: 225,
+        dip: 54.7356,
+        dipDirection: 'S',
+        rake: 60,
+        strikeDirection: 'N',
+        typeOfMovement: 'LL',
+        normal: [OneOverSqrt3, -OneOverSqrt3, OneOverSqrt3]
+    }
 ]
 
 const R = 0.5
@@ -47,7 +121,6 @@ const stressTensor = [
 
 const properRotationVector = [7 * PiOver4, Math.acos(OneOverSqrt3), 2 * PiOver3, R]
 
-
 const rotationMatrix = {
     rot: [[0, 0, 1],
     [-1, 0, 0],
@@ -56,27 +129,24 @@ const rotationMatrix = {
 }
 
 
-
-
-
 // ----------------------------------------------------------------
 //         PRIVATE : DO NOT CHANGE ANYTHING BELOW THIS LINE
 // ----------------------------------------------------------------
 
 test('anderson inverse from stress tensor', () => {
     const stress = generateStressTensorFromTensor(stressTensor as Matrix3x3) as HypotheticalSolutionTensorParameters
-    doTestStress({datas, normals, stress, msg: 'stress tensor'})
+    doTestStress({datas, stress, msg: 'stress tensor'})
     expect(R).toBeCloseTo(stress.R)
 })
 
 test('anderson inverse from proper rotation vector', () => {
     const stress = generateStressTensor(properRotationVector[0], properRotationVector[1], properRotationVector[2], properRotationVector[3])
-    doTestStress({stress, normals, datas, msg: 'proper rotation vector'})
+    doTestStress({stress, datas, msg: 'proper rotation vector'})
     expect(R).toBeCloseTo(stress.R)
 })
 
 test('anderson inverse from rotation matrix', () => {
     const stress = generateStressTensorFromHRot(rotationMatrix.rot as Matrix3x3, rotationMatrix.R)
-    doTestStress({stress, normals, datas, msg: 'Hrot'})
+    doTestStress({stress, datas, msg: 'Hrot'})
     expect(R).toBeCloseTo(stress.R)
 })

@@ -1,14 +1,21 @@
-import { DataArgument, DataDescription, DataFactory, DataStatus, Plane, RuptureFrictionAngles, Sigma1_nPlaneAngle, Striation } from "../data"
+import { DataFactory, DataStatus, Plane, RuptureFrictionAngles, Sigma1_nPlaneAngle, Striation } from "../data"
 import { deg2rad } from "../types"
 import { Direction, TypeOfMovement, isDefined, isGeographicDirection, isNumber, isTypeOfMovement } from "../utils"
+import {
+    assertNumberDefined,
+    assertPropertyDefined, getDirection, getTypeOfMovement, isDirectionDefined, 
+    isNumberDefined, isPropertyDefined, isTypeOfMovementDefined
+} from "../utils/assertJson"
 
 /**
  * Read from data file the parameters definning the plane orientation, the striation orientation and the type of movement.
  * Special cases such as horizontal and vertical planes are considered
  */
-export function readStriatedFaultPlane(arg: DataArgument, plane: Plane, striation: Striation, result: DataStatus): void {
-    plane.strike = DataDescription.getParameter(arg.setIndex(2))
-    plane.dip = DataDescription.getParameter(arg.setIndex(3))
+export function readStriatedFaultPlane(obj: any, plane: Plane, striation: Striation, result: DataStatus): void {
+    assertNumberDefined(obj, 'strike')
+    assertNumberDefined(obj, 'dip')
+    plane.strike = obj.strike
+    plane.dip = obj.dip
     // The dip direction is read after the rake
 
     // ----------------------
@@ -21,30 +28,28 @@ export function readStriatedFaultPlane(arg: DataArgument, plane: Plane, striatio
     let strikeDirIsUND = false
     let strikeDirIsEmptySet = false
 
-    if (!isNumber(arg.toks[5]) && !isNumber(arg.toks[7])) {
+    if (!isPropertyDefined(obj, "rake") && !isPropertyDefined(obj, "striationTrend")) {
         // The striation must be defined either by the rake or by the striation trend 
         result.status = false
-        result.messages.push(`Data number ${arg.toks[0]}, striation parameters for ${arg.toks[1]}: please set either the rake (col 5) or the striation trend (col 7)`)
-
-    } else if (isNumber(arg.toks[5]) && isNumber(arg.toks[7])) {
+        result.messages.push(`Data number ${obj.id}, striation parameters for ${obj.type}: please set either the rake or the striationTrend`)
+    } else if (isNumberDefined(obj, "rake") && isNumberDefined(obj, "striationTrend")) {
         // The striation must be defined either by the rake or by the striation trend 
         result.status = false
-        result.messages.push(`Data number ${arg.toks[0]}, striation parameters for ${arg.toks[1]}: please set either the rake (col 5) or the striation trend (col 7), but not both`)
-
-    } else if (isNumber(arg.toks[5])) {
+        result.messages.push(`Data number ${obj.id}, striation parameters for ${obj.type}: please set either the rake or the striationTrend, but not both`)
+    } else if (isNumberDefined(obj, 'rake')) {
         // The rake is defined 
         striation.trendIsDefined = false
-        striation.rake = DataDescription.getParameter(arg.setIndex(5))
+        striation.rake = obj.rake
 
         if (striation.rake < 0 || striation.rake > 90) {
             // The rake is not in interval [0,90]: in principle, this condition this condition has already been checked in DataDescription, checkRanges
             result.status = false
-            result.messages.push(`Data number ${arg.toks[0]}, ${arg.toks[1]}, striation parameter: please set the rake (col 5) in interval [0,90]`)
+            result.messages.push(`Data number ${obj.id}, ${obj.type}, striation parameter: please set the rake in interval [0,90]`)
         }
 
-        if (isDefined(arg.toks[6])) {
+        if (isDirectionDefined(obj, 'strikeDirection')) {
             // The strike direction is defined 
-            striation.strikeDirection = DataDescription.getParameter(arg.setIndex(6))
+            striation.strikeDirection = getDirection(obj, 'strikeDirection')
 
             if (isGeographicDirection(striation.strikeDirection) === true) {
                 // The strike direction is a valid geographic direction: 'E', 'W', 'N', 'S', 'NE', 'SE', 'SW', 'NW'
@@ -58,7 +63,7 @@ export function readStriatedFaultPlane(arg: DataArgument, plane: Plane, striatio
             else {
                 // The strike direction is not a valid string 
                 result.status = false
-                result.messages.push(`Data number ${arg.toks[0]}, striation parameters for ${arg.toks[1]}: please set the strike direction (col 6) from set (E, W, N, S, NE, SE, SW, NW, UND)`)
+                result.messages.push(`Data number ${obj.id}, striation parameters for ${obj.type}: please set the strikeDirection from set (E, W, N, S, NE, SE, SW, NW, UND)`)
             }
         } else {
             // Strike direction is not defined (i.e., empty set)
@@ -67,13 +72,15 @@ export function readStriatedFaultPlane(arg: DataArgument, plane: Plane, striatio
     } else {
         // The striation trend is defined
         striation.trendIsDefined = true
-        striation.trend = DataDescription.getParameter(arg.setIndex(7))
+        assertPropertyDefined(obj, 'trend')
+        striation.trend = obj.trend
     }
 
     if (plane.dip > 0 && plane.dip < 90) {
         // General situation: the striated plane is neither horizontal nor vertical
 
-        if (isNumber(arg.toks[5])) { // The rake is defined
+        if (isPropertyDefined(obj, 'rake')) { // The rake is defined
+            striation.rake = obj.rake
 
             if (striation.rake > 0 && striation.rake < 90) {
                 // The the rake is in interval (0,90); thus, the striation is neither horizontal nor perpendicular to the strike 
@@ -82,18 +89,18 @@ export function readStriatedFaultPlane(arg: DataArgument, plane: Plane, striatio
                 if (strikeDirIsEmptySet) {
                     // The strike direction cannot be the empty set
                     result.status = false
-                    result.messages.push(`Data number ${arg.toks[0]}, ${arg.toks[1]}, striation parameter: the strike direction (col 6) is not the empty string; please set a geographic direction for the strike direction (col 6)`)
+                    result.messages.push(`Data number ${obj.id}, ${obj.type}, striation parameter: the strikeDirection is not the empty string; please set a geographic direction for the strikeDirection`)
 
                 } else if (strikeDirIsUND) {
                     // The strike direction must be defined in terms of a geographic direction (i.e., it cannot be undefined - UND)
                     result.status = false
-                    result.messages.push(`Data number ${arg.toks[0]}, ${arg.toks[1]}, striation parameter: the strike direction (col 6) is not undefined (UND); please set a geographic direction from set (E, W, N, S, NE, SE, SW, NW)`)
+                    result.messages.push(`Data number ${obj.id}, ${obj.type}, striation parameter: the strikeDirection is not undefined (UND); please set a geographic direction from set (E, W, N, S, NE, SE, SW, NW)`)
 
                 } else if (!strikeDirIsGeographicDir) {
                     // The strike direction must be defined in terms of a geographic direction (E, W, N, S, NE, SE, SW, NW, UND)
                     // In principle this else if is never reached as the geographic direction has already been checked
                     result.status = false
-                    result.messages.push(`Data number ${arg.toks[0]}, ${arg.toks[1]}, striation parameter: please set a geographic direction for the strike direction (col 6) from set (E, W, N, S, NE, SE, SW, NW)`)
+                    result.messages.push(`Data number ${obj.id}, ${obj.type}, striation parameter: please set a geographic direction for the strikeDirection from set (E, W, N, S, NE, SE, SW, NW)`)
                 }
 
             } else if (striation.rake === 0 || striation.rake === 90) {
@@ -109,7 +116,7 @@ export function readStriatedFaultPlane(arg: DataArgument, plane: Plane, striatio
         if (!striation.trendIsDefined) {
             // The striation trend is not defined. Thus, the rake is defined, which is incorrect
             result.status = false
-            result.messages.push(`Data number ${arg.toks[0]}, ${arg.toks[1]}, striation parameter: for a horizontal plane, please set the striation trend (col 7) to indicate relative movement of the top block (and not the rake and strike direction, cols 5, 6)`)
+            result.messages.push(`Data number ${obj.id}, ${obj.type}, striation parameter: for a horizontal plane, please set the striation trend to indicate relative movement of the top block (and not the rake and strike direction)`)
         }
 
     }
@@ -119,7 +126,7 @@ export function readStriatedFaultPlane(arg: DataArgument, plane: Plane, striatio
         if (striation.trendIsDefined) {
             // The rake must be defined and not the striation trend
             result.status = false
-            result.messages.push(`Data number ${arg.toks[0]}, ${arg.toks[1]}, striation parameters: for a vertical plane, please set the rake and strike direction (cols 5, 6) and not the striation trend (col 7)`)
+            result.messages.push(`Data number ${obj.id}, ${obj.type}, striation parameters: for a vertical plane, please set the rake and strike direction (cols 5, 6) and not the striation trend (col 7)`)
         } else {
             // The rake is defined
 
@@ -130,18 +137,18 @@ export function readStriatedFaultPlane(arg: DataArgument, plane: Plane, striatio
                 if (strikeDirIsEmptySet) {
                     // The strike direction cannot be the empty set
                     result.status = false
-                    result.messages.push(`Data number ${arg.toks[0]}, ${arg.toks[1]}, striation parameter: please set a geographic direction for the strike direction (col 6) from set (E, W, N, S, NE, SE, SW, NW)`)
+                    result.messages.push(`Data number ${obj.id}, ${obj.type}, striation parameter: please set a geographic direction for the strike direction (col 6) from set (E, W, N, S, NE, SE, SW, NW)`)
 
                 } else if (strikeDirIsUND) {
                     // The strike direction must be defined in terms of a geographic direction (i.e., it cannot be undefined - UND)
                     result.status = false
-                    result.messages.push(`Data number ${arg.toks[0]}, ${arg.toks[1]}, striation parameter: the strike direction (col 6) is not undefined (UND); please set a geographic direction from set (E, W, N, S, NE, SE, SW, NW)`)
+                    result.messages.push(`Data number ${obj.id}, ${obj.type}, striation parameter: the strike direction (col 6) is not undefined (UND); please set a geographic direction from set (E, W, N, S, NE, SE, SW, NW)`)
 
                 } else if (!strikeDirIsGeographicDir) {
                     // The strike direction must be defined in terms of a geographic direction (E, W, N, S, NE, SE, SW, NW, UND)
                     // In principle this else if is never reached as the geographic direction has already been checked
                     result.status = false
-                    result.messages.push(`Data number ${arg.toks[0]}, ${arg.toks[1]}, striation parameter: please set a geographic direction for the strike direction (col 6) from set (E, W, N, S, NE, SE, SW, NW)`)
+                    result.messages.push(`Data number ${obj.id}, ${obj.type}, striation parameter: please set a geographic direction for the strike direction (col 6) from set (E, W, N, S, NE, SE, SW, NW)`)
                 }
             } else if (striation.rake === 0 || striation.rake === 90) {
                 // The striation is horizontal or vertical, i.e., the rake = 0 or 90, and the strike direction can be either of three possibilities:
@@ -153,7 +160,7 @@ export function readStriatedFaultPlane(arg: DataArgument, plane: Plane, striatio
     else {
         // The plane dip is not in interval [0,90] (in principle this condition is already checked in ranges)
         result.status = false
-        result.messages.push(`Data number ${arg.toks[0]}, ${arg.toks[1]}, plane parameter: please set the plane dip in interval [0,90] (col 3)`)
+        result.messages.push(`Data number ${obj.id}, ${obj.type}, plane parameter: please set the plane dip in interval [0,90] (col 3)`)
     }
 
     if (strikeDirIsEmptySet) {
@@ -170,9 +177,9 @@ export function readStriatedFaultPlane(arg: DataArgument, plane: Plane, striatio
     let dipDirIsUND = false
     let dipDirIsEmptySet = false
 
-    if (isDefined(arg.toks[4])) {
+    if (isDirectionDefined(obj, 'dipDirection')) {
         // The dip direction is defined 
-        plane.dipDirection = DataDescription.getParameter(arg.setIndex(4))
+        plane.dipDirection = getDirection(obj, 'dipDirection')
 
         if (isGeographicDirection(plane.dipDirection) === true) {
             // The dip direction is a valid geographic direction: 'E', 'W', 'N', 'S', 'NE', 'SE', 'SW', 'NW'
@@ -186,7 +193,7 @@ export function readStriatedFaultPlane(arg: DataArgument, plane: Plane, striatio
         else {
             // The dip direction is not a valid string 
             result.status = false
-            result.messages.push(`Data number ${arg.toks[0]}, ${arg.toks[1]}, plane parameters: please define the dip direction (col 4) from set (E, W, N, S, NE, SE, SW, NW, UND)`)
+            result.messages.push(`Data number ${obj.id}, ${obj.type}, plane parameters: please define the dipDirection from set (E, W, N, S, NE, SE, SW, NW, UND)`)
         }
     } else {
         // dip direction is not defined (i.e., empty set)
@@ -200,17 +207,17 @@ export function readStriatedFaultPlane(arg: DataArgument, plane: Plane, striatio
         if (dipDirIsEmptySet) {
             // The dip direction cannot be the empty set
             result.status = false
-            result.messages.push(`Data number ${arg.toks[0]}, ${arg.toks[1]}, plane parameter: the dip direction (col 4) is not the empty string; please define the dip direction (col 4) from set (E, W, N, S, NE, SE, SW, NW)`)
+            result.messages.push(`Data number ${obj.id}, ${obj.type}, plane parameter: the dip direction is not the empty string; please define the dip direction (col 4) from set (E, W, N, S, NE, SE, SW, NW)`)
 
         } else if (dipDirIsUND) {
             // The dip direction must be defined in terms of a geographic direction (i.e., it cannot be undefined - UND)
             result.status = false
-            result.messages.push(`Data number ${arg.toks[0]}, ${arg.toks[1]}, plane parameter: the dip direction (col 4) is not undefined (UND); please define the dip direction (col 4) from set (E, W, N, S, NE, SE, SW, NW)`)
+            result.messages.push(`Data number ${obj.id}, ${obj.type}, plane parameter: the dip direction is not undefined (UND); please define the dip direction (col 4) from set (E, W, N, S, NE, SE, SW, NW)`)
 
         } else if (!dipDirIsGeographicDir) {
             // In principle this else if is never reached as the geographic direction has already been checked for the dip direction parameter
             result.status = false
-            result.messages.push(`Data number ${arg.toks[0]}, ${arg.toks[1]}, plane parameter: please define the dip direction (col 4) from set (E, W, N, S, NE, SE, SW, NW)`)
+            result.messages.push(`Data number ${obj.id}, ${obj.type}, plane parameter: please define the dip direction from set (E, W, N, S, NE, SE, SW, NW)`)
         }
 
     } else if (plane.dip === 0) {
@@ -235,7 +242,7 @@ export function readStriatedFaultPlane(arg: DataArgument, plane: Plane, striatio
 
             if (!dipDirIsGeographicDir) {
                 result.status = false
-                result.messages.push(`Data number ${arg.toks[0]}, ${arg.toks[1]}, plane parameter: for a vertical plane with vertical striation, THE DIP DIRECTION POINTS TOWARD THE UPLIFTED BLOCK. Please define the dip direction (col 4) from set (E, W, N, S, NE, SE, SW, NW)`)
+                result.messages.push(`Data number ${obj.id}, ${obj.type}, plane parameter: for a vertical plane with vertical striation, THE DIP DIRECTION POINTS TOWARD THE UPLIFTED BLOCK. Please define the dip direction (col 4) from set (E, W, N, S, NE, SE, SW, NW)`)
             }
         }
     }
@@ -254,9 +261,9 @@ export function readStriatedFaultPlane(arg: DataArgument, plane: Plane, striatio
     let typeOfMoveIsUND = false
     let typeOfMoveIsEmptySet = false
 
-    if (isDefined(arg.toks[8])) {
+    if (isTypeOfMovementDefined(obj, 'typeOfMovement')) {
         // The type of movement is defined 
-        striation.typeOfMovement = DataDescription.getParameter(arg.setIndex(8))
+        striation.typeOfMovement = getTypeOfMovement(obj, 'typeOfMovement')
 
         if (isTypeOfMovement(striation.typeOfMovement)) {
             // The type of movement is a valid kinematic direction: 'I', 'I_LL', 'I_RL', 'LL', 'N', 'N_LL', 'N_RL', 'RL'
@@ -270,7 +277,7 @@ export function readStriatedFaultPlane(arg: DataArgument, plane: Plane, striatio
         else {
             // The type of movement is not a valid string 
             result.status = false
-            result.messages.push(`Data number ${arg.toks[0]}, ${arg.toks[1]}, striation parameters: please set the type of movement (col 8) from set (I, I_LL, I_RL, LL, N, N_LL, N_RL, RL, UND)`)
+            result.messages.push(`Data number ${obj.id}, ${obj.type}, striation parameters: please set the typeOfMovement from set (I, I_LL, I_RL, LL, N, N_LL, N_RL, RL, UND)`)
         }
     } else {
         // type of movement is not defined (i.e., empty set)
@@ -284,18 +291,18 @@ export function readStriatedFaultPlane(arg: DataArgument, plane: Plane, striatio
         if (typeOfMoveIsEmptySet) {
             // The type of movement cannot be the empty set
             result.status = false
-            result.messages.push(`Data number ${arg.toks[0]}, ${arg.toks[1]}, striation parameter: the type of movement (col 8) is not the empty string; please set the type of movement (col 8) from set (I, I_LL, I_RL, LL, N, N_LL, N_RL, RL, UND)`)
+            result.messages.push(`Data number ${obj.id}, ${obj.type}, striation parameter: the typeOfMovement is not the empty string; please set the type of movement from set (I, I_LL, I_RL, LL, N, N_LL, N_RL, RL, UND)`)
 
         } else if (typeOfMoveIsUND) {
             // The type of movement cannot be undefined (UND)
             result.status = false
-            result.messages.push(`Data number ${arg.toks[0]}, ${arg.toks[1]}, striation parameter: the type of movement (col 8) is not undefined (UND); please set the type of movement (col 8) from set (I, I_LL, I_RL, LL, N, N_LL, N_RL, RL, UND)`)
+            result.messages.push(`Data number ${obj.id}, ${obj.type}, striation parameter: the typeOfMovement is not undefined (UND); please set the type of movement from set (I, I_LL, I_RL, LL, N, N_LL, N_RL, RL, UND)`)
 
         } else if (!typeOfMoveIsKinematicDir) {
             // The type of movement is an element of set (I, I_LL, I_RL, LL, N, N_LL, N_RL, RL)
             // In principle, this condition has already been checked
             result.status = false
-            result.messages.push(`Data number ${arg.toks[0]}, ${arg.toks[1]}, striation parameter: please set a type of movement (col 8) from set (I, I_LL, I_RL, LL, N, N_LL, N_RL, RL)`)
+            result.messages.push(`Data number ${obj.id}, ${obj.type}, striation parameter: please set a type of movement (col 8) from set (I, I_LL, I_RL, LL, N, N_LL, N_RL, RL)`)
         }
 
     } else if (plane.dip === 0) {
@@ -304,7 +311,7 @@ export function readStriatedFaultPlane(arg: DataArgument, plane: Plane, striatio
 
         if (!typeOfMoveIsUND && !typeOfMoveIsEmptySet) {
             result.status = false
-            result.messages.push(`Data number ${arg.toks[0]}, ${arg.toks[1]}, striation parameter: for a horizontal plane, please set the type of movement (col 8) as undefined (UND) or non defined (empty string)`)
+            result.messages.push(`Data number ${obj.id}, ${obj.type}, striation parameter: for a horizontal plane, please set the type of movement (col 8) as undefined (UND) or non defined (empty string)`)
         }
 
     } else if (plane.dip === 90) {
@@ -315,7 +322,7 @@ export function readStriatedFaultPlane(arg: DataArgument, plane: Plane, striatio
 
             if (!typeOfMoveIsKinematicDir) {
                 result.status = false
-                result.messages.push(`Data number ${arg.toks[0]}, ${arg.toks[1]}, striation parameter: please set a type of movement (col 8) from set (I, I_LL, I_RL, LL, N, N_LL, N_RL, RL)`)
+                result.messages.push(`Data number ${obj.id}, ${obj.type}, striation parameter: please set a type of movement from set (I, I_LL, I_RL, LL, N, N_LL, N_RL, RL)`)
             }
 
         } else {
@@ -324,7 +331,7 @@ export function readStriatedFaultPlane(arg: DataArgument, plane: Plane, striatio
 
             if (!typeOfMoveIsUND && !typeOfMoveIsEmptySet) {
                 result.status = false
-                result.messages.push(`Data number ${arg.toks[0]}, ${arg.toks[1]}, striation parameter: for a vertical plane with vertical striation, please set the type of movement (col 8) as undefined (UND) or non defined (empty string)`)
+                result.messages.push(`Data number ${obj.id}, ${obj.type}, striation parameter: for a vertical plane with vertical striation, please set the type of movement (col 8) as undefined (UND) or non defined (empty string)`)
             }
         }
     }
@@ -343,6 +350,7 @@ export function readStriatedFaultPlane(arg: DataArgument, plane: Plane, striatio
  *      frictionAngleMax = maximum friction angle
  * 
  */
+/*
 export function readFrictionAngleInterval(arg: DataArgument, ruptureFricAngle: RuptureFrictionAngles, result: DataStatus): void {
     // Minimum and maximum default values for friction angles are defined: frictionAngleMin = 0, frictionAngleMax = PI / 2
     ruptureFricAngle.isDefined = false
@@ -366,11 +374,12 @@ export function readFrictionAngleInterval(arg: DataArgument, ruptureFricAngle: R
 
         if (ruptureFricAngle.angleMax < ruptureFricAngle.angleMin) {
             result.status = false
-            result.messages.push(`Data number ${arg.toks[0]}, columns 13 and 14: parameter for ${DataFactory.name(arg.data)}, ${DataDescription.names[13]} (got ${ruptureFricAngle.angleMin}) should be less than ${DataDescription.names[14]} (got ${ruptureFricAngle.angleMax})`)
+            result.messages.push(`Data number ${obj.id}, columns 13 and 14: parameter for ${DataFactory.name(arg.data)}, ${DataDescription.names[13]} (got ${ruptureFricAngle.angleMin}) should be less than ${DataDescription.names[14]} (got ${ruptureFricAngle.angleMax})`)
         }
         ruptureFricAngle.isDefined = true
     }
 }
+*/
 
 /**
  * Read from data file the parameters definning the angular interval for <Sigma 1, nPlane> of the point associated with the fault plane in the Mohr Circle (Sigma_1, Sigma_3)/
@@ -378,6 +387,7 @@ export function readFrictionAngleInterval(arg: DataArgument, ruptureFricAngle: R
  *      nSigma1_nPlane_AngleMax = maximum friction angle
  * 
  */
+/*
 export function readSigma1nPlaneInterval(arg: DataArgument, sigma1_nPlane: Sigma1_nPlaneAngle, result: DataStatus): void {
     // Minimum and maximum default values for <Sigma 1, nPlane> angles are defined: 
     sigma1_nPlane.isDefined = false
@@ -391,7 +401,7 @@ export function readSigma1nPlaneInterval(arg: DataArgument, sigma1_nPlane: Sigma
         sigma1_nPlane.angleMax = Math.PI / 4   // The maximum <Sigma 1, nPlane> angle is set to 90° (PI/2) **
     }
     else {
-        throw new Error(`Data number ${arg.toks[0]}, columns 15 and 16 are not defined for ${DataFactory.name(arg.data)}`)
+        throw new Error(`Data number ${obj.id}, columns 15 and 16 are not defined for ${DataFactory.name(arg.data)}`)
     }
 
     if (isDefined(arg.toks[15]) || isDefined(arg.toks[16])) {
@@ -408,8 +418,9 @@ export function readSigma1nPlaneInterval(arg: DataArgument, sigma1_nPlane: Sigma
 
         if (sigma1_nPlane.angleMax < sigma1_nPlane.angleMin) {
             result.status = false
-            result.messages.push(`Data number ${arg.toks[0]}, columns 15 and 16: parameter for ${DataFactory.name(arg.data)}, ${DataDescription.names[15]} (got ${sigma1_nPlane.angleMin}) should be less than ${DataDescription.names[16]} (got ${sigma1_nPlane.angleMax})`)
+            result.messages.push(`Data number ${obj.id}, columns 15 and 16: parameter for ${DataFactory.name(arg.data)}, ${DataDescription.names[15]} (got ${sigma1_nPlane.angleMin}) should be less than ${DataDescription.names[16]} (got ${sigma1_nPlane.angleMax})`)
         }
         sigma1_nPlane.isDefined = true
     }
 }
+*/

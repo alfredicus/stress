@@ -1,8 +1,8 @@
-import { Direction, TypeOfMovement, directionExists, dirs, getDirectionFromString, getTypeOfMovementFromString, mvts, sensOfMovementExists } from '../utils/FaultHelper'
-import { DataFactory } from "./Factory"
-import { Data } from "./Data"
-import { Tokens } from './types'
-import { toInt } from '../utils'
+// import { Direction, TypeOfMovement, directionExists, dirs, getDirectionFromString, getTypeOfMovementFromString, mvts, sensOfMovementExists } from '../utils/FaultHelper'
+// import { DataFactory } from "./Factory"
+// import { Data } from "./Data"
+// import { Tokens } from './types'
+// import { toInt } from '../utils'
 
 export type DataStatus = {
     status: boolean,
@@ -15,6 +15,7 @@ export function createDataStatus() {
     }
 }
 
+/*
 export type DataArgument = {
     toks: string[],
     index: number,
@@ -22,6 +23,7 @@ export type DataArgument = {
     result: DataStatus,
     setIndex(i: number): DataArgument
 }
+
 export function createDataArgument(args: Tokens = undefined): DataArgument {
     const a = {
         toks: [],
@@ -281,3 +283,5 @@ export const DataDescription = {
     }
 
 }
+*/
+

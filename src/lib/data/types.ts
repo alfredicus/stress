@@ -33,12 +33,6 @@ export enum StriatedPlaneProblemType {
     KINEMATIC
 }
 
-// export type Line = string
-
-export type Tokens = string[]
-
-// export type DataArguments = Tokens[]
-
 export type Plane = {
     strike: number,
     dip: number,

@@ -5,12 +5,18 @@ import { doTestStressFailCost } from "../../doTestStressFailCost"
 
 // ----------------------------------------------------------------
 
-export const datas = [
-    ['1', 'Striated Plane', '0', '90', 'E', '60', 'N', '', 'LL']
-]
-
-export const normals = [
-    [-1, 0, 0]
+const datas = [
+    {
+        id: 1,
+        type: "Striated Plane",
+        strike: 0,
+        dip: 90,
+        dipDirection: 'E',
+        rake: 60,
+        strikeDirection: 'N',
+        typeOfMovement: 'LL',
+        normal: [-1, 0, 0]
+    }
 ]
 
 const R = 0.5
@@ -40,18 +46,18 @@ const rotationMatrix = {
 
 test('anderson inverse from stress tensor', () => {
     const stress = generateStressTensorFromTensor(stressTensor as Matrix3x3) as HypotheticalSolutionTensorParameters
-    doTestStressFailCost({ datas, normals, stress, msg: 'stress tensor' })
+    doTestStressFailCost({ datas, stress, msg: 'stress tensor' })
     expect(R).toBeCloseTo(stress.R)
 })
 
 test('anderson inverse from proper rotation vector', () => {
     const stress = generateStressTensor(properRotationVector[0], properRotationVector[1], properRotationVector[2], properRotationVector[3])
-    doTestStressFailCost({ stress, normals, datas, msg: 'proper rotation vector' })
+    doTestStressFailCost({ stress, datas, msg: 'proper rotation vector' })
     expect(R).toBeCloseTo(stress.R)
 })
 
 test('anderson inverse from rotation matrix', () => {
     const stress = generateStressTensorFromHRot(rotationMatrix.rot as Matrix3x3, rotationMatrix.R)
-    doTestStressFailCost({ stress, normals, datas, msg: 'Hrot' })
+    doTestStressFailCost({ stress, datas, msg: 'Hrot' })
     expect(R).toBeCloseTo(stress.R)
 })

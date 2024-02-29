@@ -4,9 +4,9 @@ import {
     FaultHelper, Direction, TypeOfMovement, getDirectionFromString,
     directionExists, getTypeOfMovementFromString, sensOfMovementExists
 } from "../../utils/FaultHelper"
-import { Tokens, FractureStrategy, StriatedPlaneProblemType, createPlane, createStriation } from "../types"
+import { FractureStrategy, StriatedPlaneProblemType, createPlane, createStriation } from "../types"
 import { Engine, HypotheticalSolutionTensorParameters } from "../../geomeca"
-import { createDataArgument, createDataStatus, DataStatus } from "../DataDescription"
+import { createDataStatus, DataStatus } from "../DataDescription"
 import { readStriatedFaultPlane } from "../../io/DataReader"
 import { toInt } from "../../utils"
 import { FaultData } from "./FaultData"
@@ -23,18 +23,28 @@ export class StriatedPlaneKin extends FaultData {
     protected nPerpStriation: Vector3
     protected noPlane = 0
 
-    initialize(args: Tokens[]): DataStatus {
-        const toks = args[0]
-        this.toks = args[0]
+    /**
+     * Example
+     * ```json
+     * {
+            "id": 2,
+            "type": "Stylolite Interface",
+            "strike": 23,
+            "dip": 76,
+            "dipDirection": "W",
+            "active": false,
+            "position": [0, 4, 2]
+        }
+     * ``` 
+     */
+    initialize(jsonObject: any): DataStatus {
         const result = createDataStatus()
-        const arg = createDataArgument(toks)
-        // arg.toks = toks
-        // arg.index = toInt(toks[0])
-
+        
         // Read parameters definning plane orientation, striation orientation and type of movement
         const plane = createPlane()
         const striation = createStriation()
-        readStriatedFaultPlane(arg, plane, striation, result)
+        
+        readStriatedFaultPlane(jsonObject, plane, striation, result)
 
         // -----------------------------------
 
@@ -45,7 +55,7 @@ export class StriatedPlaneKin extends FaultData {
         this.nPlane = f.normal
         this.nStriation = f.striation
         this.nPerpStriation = f.e_perp_striation
-        this.noPlane = toInt(toks[0])
+        this.noPlane = jsonObject.id
 
         // Check orthogonality
         const sp = scalarProductUnitVectors({ U: this.nPlane, V: this.nStriation })

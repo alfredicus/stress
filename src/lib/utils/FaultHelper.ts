@@ -796,7 +796,7 @@ export class FaultHelper {
             } else if (this.dipDirection === Direction.W) {
                 this.coordinates.phi = Math.PI
             } else {
-                throw new Error(`dip direction is wrong. Should be E or W`)
+                throw new Error(`dip direction is wrong. Should be E or W (got ${this.dipDirection})`)
             }
         } else if (this.strike < 90) {
 

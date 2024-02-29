@@ -1,10 +1,25 @@
 import { Matrix3x3, scalarProductUnitVectors, Vector3 } from "../../types"
 import { fromAnglesToNormal } from "../../utils/fromAnglesToNormal"
-import { FractureStrategy, Tokens } from "../types"
+import { FractureStrategy } from "../types"
 import { Engine, HypotheticalSolutionTensorParameters } from "../../geomeca"
 import { DataStatus } from "../DataDescription"
 import { decodePlane } from "../../utils/PlaneHelper"
 import { FractureData } from "./FractureData"
+import { setPositionIfAny } from "../../utils/assertJson"
+
+/*
+    // Mandatory data: 
+    // 0, 1    =  Data number, data type (Extension Fracture and inheriting class: Dilation Band)
+    // ------------------------------
+    // Plane orientation : 
+    // 2, 3, 4 = Strike, dip, dip direction
+    mandatory: [2, 3, 4],
+    // Optional data:
+    // 11, 12 = Deformation phase, relative weight 
+    optional: [11, 12]
+*/
+
+
 
 /**
  * @brief Represent an observed and measured joint
@@ -20,30 +35,8 @@ export class ExtensionFracture extends FractureData {
     // protected nPlane: Vector3 = undefined
     protected strategy: FractureStrategy = FractureStrategy.ANGLE
 
-    // get normal() {
-    //     return this.nPlane
-    // }
-
-    /*
-    description(): any {
-        return {
-            // Mandatory data: 
-            // 0, 1    =  Data number, data type (Extension Fracture and inheriting class: Dilation Band)
-            // ------------------------------
-            // Plane orientation : 
-            // 2, 3, 4 = Strike, dip, dip direction
-            mandatory: [2, 3, 4],
-            // Optional data:
-            // 11, 12 = Deformation phase, relative weight 
-            optional: [11, 12]
-        }
-    }
-    */
-
-    initialize(args: Tokens[]): DataStatus {
-        const toks = args[0]
-        this.toks = toks
-        const plane = decodePlane(toks)
+    initialize(obj: any): DataStatus {
+        const plane = decodePlane(obj)
 
         // Calculate the unit vector normal to the Plane
         this.nPlane = fromAnglesToNormal({
@@ -53,11 +46,7 @@ export class ExtensionFracture extends FractureData {
         })
 
         // Read position if any
-        if (toks.length > 21) {
-            if (toks[19].length !== 0) this.pos[0] = parseFloat(toks[19])
-            if (toks[20].length !== 0) this.pos[1] = parseFloat(toks[20])
-            if (toks[21].length !== 0) this.pos[2] = parseFloat(toks[21])
-        }
+        setPositionIfAny(obj, this.pos)
 
         return plane.result
     }
@@ -82,8 +71,6 @@ export class ExtensionFracture extends FractureData {
     // According to the tensor solution,
     // should return a normal or a set of 2 angles (e.g., dip and dip-azimuth)
     predict(engine: Engine, { displ, strain, stress }: { displ?: Vector3; strain?: HypotheticalSolutionTensorParameters; stress?: HypotheticalSolutionTensorParameters }) {
-        // const dot = scalarProductUnitVectors({ U: stress.S3_Y, V: this.nPlane })
-        // return Math.acos(Math.abs(dot))
         return engine.stress(this.position).S3_Y
     }
 }

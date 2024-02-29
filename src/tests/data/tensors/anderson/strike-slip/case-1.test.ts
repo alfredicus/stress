@@ -1,10 +1,136 @@
-import { HalfPi, Matrix3x3, OneOverSqrt3, PiOver3, PiOver4, Sqrt2Over2, Sqrt2Over4, Sqrt3Over2 } from "../../../../../lib"
+import { HalfPi, Matrix3x3, OneOverSqrt3, PiOver3, PiOver4, Sqrt2Over2, Sqrt2Over4, Sqrt3Over2, Sqrt6Over4 } from "../../../../../lib"
 import { HypotheticalSolutionTensorParameters } from "../../../../../lib/geomeca"
 import { generateStressTensor, generateStressTensorFromHRot, generateStressTensorFromTensor } from "../../../../../lib/geomeca/generateStressTensor"
 import { doTestStress } from "../../doTestStress"
 
 // ----------------------------------------------------------------
 
+// Strike-slip Regime, Tensor 1
+
+const datas = [
+    {
+        id: 1,
+        type: "Extension Fracture",
+        strike: 45,
+        dip: 90,
+        dipDirection: '',
+        normal: [-Sqrt2Over2, Sqrt2Over2, 0]
+    },
+    {
+        id: 2,
+        type: "Extension Fracture",
+        strike: 225,
+        dip: 90,
+        dipDirection: 'SE',
+        normal: [Sqrt2Over2, -Sqrt2Over2, 0]
+    },
+    {
+        id: 3,
+        type: "Stylolite Interface",
+        strike: 135,
+        dip: 90,
+        dipDirection: 'N',
+        normal: [Sqrt2Over2, Sqrt2Over2, 0]
+    },
+    {
+        id: 4,
+        type: "Stylolite Interface",
+        strike: 315,
+        dip: 90,
+        dipDirection: 'W',
+        normal: [Sqrt2Over2, Sqrt2Over2, 0]
+    },
+    {
+        id: 5,
+        type: "Striated Plane",
+        strike: 135,
+        dip: 30,
+        dipDirection: 'NE',
+        rake: 90,
+        strikeDirection: 'W',
+        typeOfMovement: 'I',
+        normal: [Sqrt2Over4, Sqrt2Over4, Sqrt3Over2]
+    },
+    {
+        id: 6,
+        type: "Striated Plane",
+        strike: 315,
+        dip: 30,
+        dipDirection: 'E',
+        rake: 90,
+        strikeDirection: 'S',
+        typeOfMovement: 'I',
+        normal: [Sqrt2Over4, Sqrt2Over4, Sqrt3Over2]
+    },
+    {
+        id: 7,
+        type: "Striated Plane",
+        strike: 45,
+        dip: 60,
+        dipDirection: 'S',
+        rake: 90,
+        strikeDirection: 'N',
+        typeOfMovement: 'N',
+        normal: [Sqrt6Over4, -Sqrt6Over4, 0.5]
+    },   
+    {
+        id: 8,
+        type: "Striated Plane",
+        strike: 225,
+        dip: 60,
+        dipDirection: 'E',
+        rake: 90,
+        strikeDirection: 'W',
+        typeOfMovement: 'N',
+        normal: [Sqrt6Over4, -Sqrt6Over4, 0.5]
+    },
+    {
+        id: 9,
+        type: "Striated Plane",
+        strike: 0,
+        dip: 60,
+        dipDirection: 'W',
+        rake: 0,
+        strikeDirection: 'N',
+        typeOfMovement: 'RL',
+        normal: [-Sqrt3Over2, 0, 0.5]
+    },
+    {
+        id: 10,
+        type: "Striated Plane",
+        strike: 180,
+        dip: 60,
+        dipDirection: 'W',
+        rake: 0,
+        strikeDirection: 'S',
+        typeOfMovement: 'RL',
+        normal: [-Sqrt3Over2, 0, 0.5]
+    },
+    {
+        id: 11,
+        type: "Striated Plane",
+        strike: 90,
+        dip: 60,
+        dipDirection: 'N',
+        rake: 0,
+        strikeDirection: 'E',
+        typeOfMovement: 'LL',
+        normal: [0, Sqrt3Over2, 0.5]
+    },
+    {
+        id: 12,
+        type: "Striated Plane",
+        strike: 270,
+        dip: 60,
+        dipDirection: 'N',
+        rake: 0,
+        strikeDirection: 'W',
+        typeOfMovement: 'LL',
+        normal: [0, Sqrt3Over2, 0.5]
+    }
+]
+
+/*
 export const datas = [
     ['1', 'Extension Fracture', '45', '90', ''],
     ['2', 'Extension Fracture', '225', '90', 'SE'],
@@ -36,6 +162,7 @@ export const normals = [
     [0, Sqrt3Over2, 0.5]
 
 ]
+*/
 
 const R = 0.5
 
@@ -65,18 +192,18 @@ const rotationMatrix = {
 
 test('anderson inverse from stress tensor', () => {
     const stress = generateStressTensorFromTensor(stressTensor as Matrix3x3) as HypotheticalSolutionTensorParameters
-    doTestStress({datas, normals, stress, msg: 'stress tensor'})
+    doTestStress({datas, stress, msg: 'stress tensor'})
     expect(R).toBeCloseTo(stress.R)
 })
 
 test('anderson inverse from proper rotation vector', () => {
     const stress = generateStressTensor(properRotationVector[0], properRotationVector[1], properRotationVector[2], properRotationVector[3])
-    doTestStress({stress, normals, datas, msg: 'proper rotation vector'})
+    doTestStress({stress, datas, msg: 'proper rotation vector'})
     expect(R).toBeCloseTo(stress.R)
 })
 
 test('anderson inverse from rotation matrix', () => {
     const stress = generateStressTensorFromHRot(rotationMatrix.rot as Matrix3x3, rotationMatrix.R)
-    doTestStress({stress, normals, datas, msg: 'Hrot'})
+    doTestStress({stress, datas, msg: 'Hrot'})
     expect(R).toBeCloseTo(stress.R)
 })

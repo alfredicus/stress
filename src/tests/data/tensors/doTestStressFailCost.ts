@@ -1,25 +1,33 @@
-import { DataFactory, Vector3 } from "../../../lib"
+import { Data, DataFactory, Vector3 } from "../../../lib"
+import { FaultData } from "../../../lib/data/stress/FaultData"
+import { FractureData } from "../../../lib/data/stress/FractureData"
 import { HomogeneousEngine, HypotheticalSolutionTensorParameters } from "../../../lib/geomeca"
 import { expectVector } from "../../types/expectAlgebra"
 
-export function doTestStressFailCost({ datas, normals, stress, msg = '' }: { datas: string[][], normals: number[][], stress: HypotheticalSolutionTensorParameters, msg?: string }) {
-    expect(datas.length === normals.length)
-
+export function doTestStressFailCost(
+    { datas, stress, msg = '' }:
+    { datas: any[], stress: HypotheticalSolutionTensorParameters, msg?: string })
+{
     const engine = new HomogeneousEngine(stress.Hrot, stress.R)
 
-    datas.forEach((params: string[], index: number) => {
-        const data = DataFactory.create(params[1])
-        data.initialize([params])
+    datas.forEach( d => {
+        const data = DataFactory.create(d.type) as Data
 
-        const normal = normals[index]
+        let isPlane = false
+        if (data instanceof FractureData) {
+            isPlane = true
+        }
 
-        // Introspection
-        if (data['normal'] !== undefined) {
+        data.initialize(d)
+
+        const normal = d.normal as Vector3
+
+        if (data instanceof FaultData) {
             try {
-                expectVector(data['normal']).toBeCloseTo(normals[index] as Vector3)
+                expectVector(data.normal).toBeCloseTo(normal)
             }
             catch (e) {
-                console.error('Checking normal for data ' + params + ' for test ' + msg + ' : ' + data['normal'] + ' # ' + normal)
+                console.error('Checking normal for data ' + JSON.stringify(d) + ' for test ' + msg + ' : ' + data['normal'] + ' # ' + normal)
                 throw e
             }
         }
@@ -30,7 +38,7 @@ export function doTestStressFailCost({ datas, normals, stress, msg = '' }: { dat
             expect(c).not.toBeCloseTo(0)
         }
         catch (e) {
-            console.error('Checking data ' + params + ' for test ' + msg + `: cost is close to zero (got ${c})!`)
+            console.error('Checking cost for data ' + JSON.stringify(d) + ' for test ' + msg + `: cost different from zero (got ${c})!`)
             throw e
         }
     })

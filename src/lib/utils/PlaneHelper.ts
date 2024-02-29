@@ -1,15 +1,12 @@
-import { DataDescription, Tokens, createDataArgument } from "../data"
+import { createDataStatus } from "../data"
 import { Direction, isGeographicDirection } from "./FaultHelper"
-import { isDefined, toInt } from "./numberUtils"
+import { assertNumberDefined, getDirection, isPropertyDefined } from "./assertJson"
 
-// export class PlaneHelper {
-
-export function decodePlane(args: Tokens) {
-
-    const arg = createDataArgument(args)
-
-    let strike = DataDescription.getParameter(arg.setIndex(2))
-    let dip = DataDescription.getParameter(arg.setIndex(3))
+export function decodePlane(obj: any) {
+    assertNumberDefined(obj, 'strike')
+    assertNumberDefined(obj, 'dip')
+    let strike = obj.strike
+    let dip = obj.dip
     let dipDirection = Direction.ERROR
 
     // Check consistency of the dip direction
@@ -18,14 +15,11 @@ export function decodePlane(args: Tokens) {
     let dipDirIsEmptySet = false
     let dipDirIsGeographicDir = false
 
-    // const result = {
-    //     status: true,
-    //     messages: []
-    // }
+    const result = createDataStatus()
 
-    if (isDefined(arg.toks[4])) {
+    if (isPropertyDefined(obj, 'dipDirection')) {
         // The dip direction is defined 
-        dipDirection = DataDescription.getParameter(arg.setIndex(4))
+        dipDirection = getDirection(obj, 'dipDirection')
 
         if (isGeographicDirection(dipDirection)) {
             // The dip direction is a valid geographic direction: 'E', 'W', 'N', 'S', 'NE', 'SE', 'SW', 'NW'
@@ -38,8 +32,8 @@ export function decodePlane(args: Tokens) {
         }
         else {
             // The dip direction is not a valid string 
-            arg.result.status = false
-            arg.result.messages.push(`Data number ${arg.toks[0]}, ${arg.toks[1]}, plane parameters: please define the dip direction (col 4) from set (E, W, N, S, NE, SE, SW, NW, UND)`)
+            result.status = false
+            result.messages.push(`Data number ${obj.id}, ${obj.type}, plane parameters: please define the dip direction from set (E, W, N, S, NE, SE, SW, NW, UND)`)
         }
     } else {
         // dip direction is not defined (i.e., empty set)
@@ -51,26 +45,26 @@ export function decodePlane(args: Tokens) {
 
         if (dipDirIsEmptySet) {
             // The dip direction cannot be the empty set
-            arg.result.status = false
-            arg.result.messages.push(`Data number ${arg.toks[0]}, ${arg.toks[1]}, plane parameter: the dip direction (col 4) is not the empty string; please define the dip direction (col 4) from set (E, W, N, S, NE, SE, SW, NW)`)
+            result.status = false
+            result.messages.push(`Data number ${obj.id}, ${obj.type}, plane parameter: the dip direction is not the empty string; please define the dip direction from set (E, W, N, S, NE, SE, SW, NW)`)
 
         } else if (dipDirIsUND) {
             // The dip direction must be defined in terms of a geographic direction (i.e., it cannot be undefined - UND)
-            arg.result.status = false
-            arg.result.messages.push(`Data number ${arg.toks[0]}, ${arg.toks[1]}, plane parameter: the dip direction (col 4) is not undefined (UND); please define the dip direction (col 4) from set (E, W, N, S, NE, SE, SW, NW)`)
+            result.status = false
+            result.messages.push(`Data number ${obj.id}, ${obj.type}, plane parameter: the dip direction is not undefined (UND); please define the dip direction from set (E, W, N, S, NE, SE, SW, NW)`)
 
         } else if (!dipDirIsGeographicDir) {
             // In principle this else if is never reached as the geographic direction has already been checked for the dip direction parameter
-            arg.result.status = false
-            arg.result.messages.push(`Data number ${arg.toks[0]}, ${arg.toks[1]}, plane parameter: please define the dip direction (col 4) from set (E, W, N, S, NE, SE, SW, NW)`)
+            result.status = false
+            result.messages.push(`Data number ${obj.id}, ${obj.type}, plane parameter: please define the dip direction  from set (E, W, N, S, NE, SE, SW, NW)`)
         }
 
     } else {
         if (dipDirection !== Direction.UND) {
             // For horizontal and vertical planes, the dip direction is either undefined (UND) or not defined (the empty set)
             if (!dipDirIsUND && !dipDirIsEmptySet) {
-                arg.result.status = false
-                arg.result.messages.push(`Data number ${arg.toks[0]}, ${arg.toks[1]}, plane parameter: for a horizontal plane, please set the dip direction (col 4) as undefined (UND) or non defined (empty string)`)
+                result.status = false
+                result.messages.push(`Data number ${obj.id}, ${obj.type}, plane parameter: for a horizontal plane, please set the dip direction as undefined (UND) or non defined (empty string)`)
             }
         }
     }
@@ -96,7 +90,7 @@ export function decodePlane(args: Tokens) {
     ...
     */
     return {
-        result: arg.result,
+        result,
         dip,
         strike,
         dipDirection
