@@ -8,6 +8,8 @@ import { Matrix3x3} from "../types/math"
  */
 export interface SearchMethod {
 
+    setOptions(json: any): void
+
     setInteractiveSolution({rot, stressRatio}:{rot: Matrix3x3, stressRatio: number}): void
 
     setEngine(engine: Engine): void

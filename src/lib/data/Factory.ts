@@ -1,5 +1,8 @@
 import { Data } from './Data'
+import { CompactionBand } from './stress/CompactionBand'
+import { DilationBand } from './stress/DilationBand'
 import { ExtensionFracture } from './stress/ExtensionFracture'
+import { NeoformedStriatedPlane } from './stress/NeoformedStriatedPlane'
 import { StriatedPlaneKin } from './stress/StriatedPlane_Kin'
 import { StyloliteInterface } from './stress/StyloliteInterface'
 
@@ -9,11 +12,12 @@ export namespace DataFactory {
     const map_: Map<string, any> = new Map()
 
     export const bind = (obj: any, name: string = '') => {
-        name.length === 0 ? map_.set(obj.name, obj) : map_.set(name, obj)
+        const className = name.length === 0 ? obj.name : name
+        map_.set(className.toLowerCase(), obj)
     }
 
     export const create = (name: string, params: any = undefined): Data => {
-        const M = map_.get(name)
+        const M = map_.get(name.toLowerCase())
         if (M) {
             return new M(params)
         }
@@ -21,7 +25,7 @@ export namespace DataFactory {
     }
 
     export const exists = (name: string): boolean => {
-        return map_.get(name) !== undefined
+        return map_.get(name.toLowerCase()) !== undefined
     }
 
     export const names = (): string[] => {
@@ -35,8 +39,8 @@ export namespace DataFactory {
 }
 
 // Fault planes
-DataFactory.bind(StriatedPlaneKin, 'Striated Plane')
-// DataFactory.bind(NeoformedStriatedPlane, 'Neoformed Striated Plane')
+DataFactory.bind(StriatedPlaneKin, 'striated plane')
+DataFactory.bind(NeoformedStriatedPlane, 'neoformed striated plane')
 // DataFactory.bind(StriatedPlaneFriction1, 'Striated Plane Friction1')
 // DataFactory.bind(StriatedPlaneFriction2, 'Striated Plane Friction2')
 
@@ -53,12 +57,9 @@ DataFactory.bind(StriatedPlaneKin, 'Striated Plane')
 // DataFactory.bind(ConjugateDilatantShearBands, 'Conjugate Dilatant Shear Bands 2')
 
 // Extensional fractures and dilation bands
-// DataFactory.bind(DilationBand, 'Dilation Band')
-DataFactory.bind(ExtensionFracture, 'Extension Fracture')
+DataFactory.bind(DilationBand, 'dilation band')
+DataFactory.bind(ExtensionFracture, 'extension fracture')
 
 // Compresional interfaces and compaction bands
-// DataFactory.bind(CompactionBand, 'Compaction Band')
-DataFactory.bind(StyloliteInterface, 'Stylolite Interface')
-
-
-
+DataFactory.bind(CompactionBand, 'compaction band')
+DataFactory.bind(StyloliteInterface, 'stylolite interface')

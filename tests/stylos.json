@@ -1,0 +1,26 @@
+[
+    {
+        "id": 1,
+        "type": "stylolite interface",
+        "strike": 70.3509562,
+        "dip": 90
+    },
+    {
+        "id": 2,
+        "type": "stylolite interface",
+        "strike": 69.22382491,
+        "dip": 90
+    },
+    {
+        "id": 3,
+        "type": "stylolite interface",
+        "strike": 70.3509562,
+        "dip": 90
+    },
+    {
+        "id": 8,
+        "type": "stylolite interface",
+        "strike": 69.22382491,
+        "dip": 90
+    }
+]

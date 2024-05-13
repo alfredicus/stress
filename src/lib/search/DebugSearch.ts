@@ -10,6 +10,10 @@ import { SearchMethod } from "./SearchMethod";
 export class DebugSearch implements SearchMethod {
     private engine_: Engine = new HomogeneousEngine()
 
+    setOptions(json: any): void {
+        
+    }
+
     getEngine() {
         return this.engine_
     }

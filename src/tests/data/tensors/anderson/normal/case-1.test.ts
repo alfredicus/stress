@@ -8,6 +8,23 @@ import { doTestStress } from "../../doTestStress"
 // Normal Regime, Tensor 1
 
 const datas = [
+    
+    {
+        id: 16,
+        type: "Neoformed Striated Plane",
+        strike: 0,
+        dip: 60,
+        dipDirection: 'W',
+        rake: 90,
+        strikeDirection: 'N',
+        typeOfMovement: 'N',
+        normal: [-Sqrt3Over2, 0, 0.5],
+        angleType: 'S1',
+        minAngle: 30.,
+        maxAngle: 30.
+    }
+
+    /*
     {
         type: "Extension Fracture",
         id: [1, 2],
@@ -108,7 +125,33 @@ const datas = [
         strikeDirection: 'N',
         typeOfMovement: 'LL',
         normal: [OneOverSqrt3, -OneOverSqrt3, OneOverSqrt3]
-    }
+    },
+    {
+        id: 13,
+        type: "Neoformed Striated Plane",
+        strike: 0,
+        dip: 60,
+        dipDirection: 'E',
+        rake: 90,
+        strikeDirection: 'N',
+        typeOfMovement: 'N',
+        normal: [Sqrt3Over2, 0, 0.5]
+    },
+    {
+        id: 14,
+        type: "Neoformed Striated Plane",
+        strike: 0,
+        dip: 60,
+        dipDirection: 'W',
+        rake: 90,
+        strikeDirection: 'N',
+        typeOfMovement: 'N',
+        normal: [-Sqrt3Over2, 0, 0.5],
+        angleType: 'friction',
+        minAngle: 30.,
+        maxAngle: 30.
+    },
+    */
 ]
 
 const R = 0.5

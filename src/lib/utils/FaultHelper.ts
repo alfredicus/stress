@@ -5,6 +5,44 @@ import { deg2rad, tensor_x_Vector, spherical2unitVectorCartesian } from "../type
 import { SphericalCoords } from "../types/SphericalCoords"
 import { Plane, Striation } from "../data"
 import { scalarProduct } from "../types"
+import { NeoformedStriatedPlane } from "../data/stress/NeoformedStriatedPlane"
+import { trimAll } from "./trimAlls"
+
+// ------------------------------------------------------------------------
+
+export enum StrengthAngleType {
+    Friction,
+    Sigma1,
+    Undefined
+}
+export function getStrengthAngleTypeFromString(s: string): StrengthAngleType {
+    switch (s) {
+        case 'Friction': return StrengthAngleType.Friction
+        case 'Sigma1': return StrengthAngleType.Sigma1
+        case 'Undefined': return StrengthAngleType.Undefined
+        default: throw `unknown strength angle type ${s}`
+    }
+}
+
+// ------------------------------------------------------------------------
+
+export const enum StriationType {
+    Riedel,
+    PPlane,
+    Calcite,
+    Strilolyte
+}
+export function getStriationTypeFromString(s: string): StriationType {
+    switch (s) {
+        case 'Riedel': return StriationType.Riedel
+        case 'PPlane': return StriationType.PPlane
+        case 'Calcite': return StriationType.Calcite
+        case 'Strilolyte': return StriationType.Strilolyte
+        default: throw `unknown striation type ${s}`
+    }
+}
+
+// ------------------------------------------------------------------------
 
 /**
  * Usage:
@@ -32,7 +70,7 @@ export function isTypeOfMovement(d: TypeOfMovement): boolean {
 
 export const mvts = ['N', 'I', 'RL', 'LL', 'N_RL', 'N_LL', 'I_RL', 'I_LL', 'UND']
 
-export function sensOfMovementExists(s: string): boolean {
+export function typeOfMovementExists(s: string): boolean {
     if (s.length === 0) {
         return true
     }
@@ -40,16 +78,87 @@ export function sensOfMovementExists(s: string): boolean {
 }
 
 export function getTypeOfMovementFromString(s: string): TypeOfMovement {
-    switch (s) {
-        case 'N': return TypeOfMovement.N // 0
-        case 'I': return TypeOfMovement.I
-        case 'RL': return TypeOfMovement.RL // 2
-        case 'LL': return TypeOfMovement.LL
-        case 'N_RL': return TypeOfMovement.N_RL // 4
-        case 'N_LL': return TypeOfMovement.N_LL
-        case 'I_RL': return TypeOfMovement.I_RL // 6
-        case 'I_LL': return TypeOfMovement.I_LL
-        case 'UND': return TypeOfMovement.UND // 8
+    // replace all - and _ by a space
+    const S = trimAll(s.replace('-', ' ').replace('_', ' ').toLowerCase())
+
+    switch (S) {
+        case 'normal':
+        case 'n': return TypeOfMovement.N // 0
+
+        case 'inverse':
+        case 'reverse':
+        case 'thrust':
+        case 'i':
+        case 'r': return TypeOfMovement.I
+
+        case 'right lateral':
+        case 'dextral':
+        case 'rl':
+        case 'd': return TypeOfMovement.RL // 2
+
+        case 'left lateral':
+        case 'sinistral':
+        case 'll':
+        case 's': return TypeOfMovement.LL
+
+        case 'normal right lateral':
+        case 'right lateral normal':
+        case 'normal dextral':
+        case 'dextral normal':
+        case 'n rl':
+        case 'rl n':
+        case 'n d':
+        case 'd n': return TypeOfMovement.N_RL // 4
+
+        case 'normal left lateral':
+        case 'left lateral normal':
+        case 'normal sinistral':
+        case 'sinistral normal':
+        case 'n ll':
+        case 'll n':
+        case 'n s':
+        case 's n': return TypeOfMovement.N_LL
+
+        case 'inverse right lateral':
+        case 'right lateral inverse':
+        case 'inverse dextral':
+        case 'dextral inverse':
+        case 'reverse right lateral':
+        case 'right lateral reverse':
+        case 'reverse dextral':
+        case 'dextral reverse':
+        case 'i rl':
+        case 'rl i':
+        case 'i d':
+        case 'd i':
+        case 'r rl':
+        case 'rl r':
+        case 'r d': 
+        case 'd r': return TypeOfMovement.I_RL // 6
+
+        case 'inverse left lateral':
+        case 'left lateral inverse':
+        case 'inverse sinistral':
+        case 'sinistral inverse':
+        case 'reverse left lateral':
+        case 'left lateral reverse':
+        case 'reverse sinistral':
+        case 'sinistral reverse':
+        case 'i ll':
+        case 'll i':
+        case 'i s':
+        case 's i':
+        case 'r ll':
+        case 'll r':
+        case 'r s':
+        case 's r': return TypeOfMovement.I_LL
+
+        case 'undefined':
+        case 'undetermined':
+        case 'unknown':
+        case 'null':
+        case '':
+        case 'und': return TypeOfMovement.UND // 8
     }
 }
 
@@ -87,15 +196,33 @@ export function getDirectionFromString(s: string): Direction {
         return Direction.UND
     }
 
-    switch (s) {
-        case 'E': return Direction.E
-        case 'W': return Direction.W
-        case 'N': return Direction.N
-        case 'S': return Direction.S
-        case 'NE': return Direction.NE
-        case 'SE': return Direction.SE
-        case 'SW': return Direction.SW
-        case 'NW': return Direction.NW
+    const S = s.replace('-', ' ').toLowerCase()
+
+    switch (S) {
+        case 'east':
+        case 'e': return Direction.E
+
+        case 'west':
+        case 'w': return Direction.W
+
+        case 'north':
+        case 'n': return Direction.N
+
+        case 'south':
+        case 's': return Direction.S
+
+        case 'north east':
+        case 'ne': return Direction.NE
+
+        case 'south east':
+        case 'se': return Direction.SE
+
+        case 'south west':
+        case 'sw': return Direction.SW
+
+        case 'north west':
+        case 'nw': return Direction.NW
+
         default: return Direction.ERROR
     }
 }
@@ -1036,7 +1163,7 @@ export class FaultHelper {
                 throw new Error(`dip direction is wrong. Should be E or W`)
             }
         } else if (this.strike < 90) {
-            if ((this.dipDirection === Direction.S) || (this.dipDirection === Direction.E) || (this.dipDirection === Direction.SE) ) {
+            if ((this.dipDirection === Direction.S) || (this.dipDirection === Direction.E) || (this.dipDirection === Direction.SE)) {
                 if ((this.strikeDirection === Direction.N) || (this.strikeDirection === Direction.E) || (this.strikeDirection === Direction.NE)) {
                     this.alphaStriaDeg = this.rake
                     this.alphaStria = deg2rad(this.rake)

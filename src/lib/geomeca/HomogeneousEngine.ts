@@ -18,7 +18,7 @@ export class HomogeneousEngine implements Engine {
         this.stressRatio_ = stressRatio
     }
 
-    stress(p: Vector3): HypotheticalSolutionTensorParameters {
+    stress(p_: Vector3): HypotheticalSolutionTensorParameters {
         return this.hst_
     }
 

@@ -17,7 +17,7 @@ function addData(
 }
 */
 
-test('test inversion 1', () => {
+test('inversion 1', () => {
 
     /*
     const data: Data[] = []

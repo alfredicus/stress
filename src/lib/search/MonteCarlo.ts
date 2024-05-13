@@ -42,6 +42,12 @@ export class MonteCarlo implements SearchMethod {
         this.RTrot = transposeTensor(this.Rrot)
     }
 
+    setOptions(json: any): void {
+        if (json.nbIter !== undefined) {
+            this.setNbIter(json.nbIter)
+        }
+    }
+
     setNbIter(n: number) {
         this.nbRandomTrials = n
     }

@@ -2,7 +2,7 @@ import { Matrix3x3, normalizeVector, scalarProductUnitVectors, Vector3 } from ".
 import { faultStressComponents } from "../../types/mechanics"
 import {
     FaultHelper, Direction, TypeOfMovement, getDirectionFromString,
-    directionExists, getTypeOfMovementFromString, sensOfMovementExists
+    directionExists, getTypeOfMovementFromString, typeOfMovementExists
 } from "../../utils/FaultHelper"
 import { FractureStrategy, StriatedPlaneProblemType, createPlane, createStriation } from "../types"
 import { Engine, HypotheticalSolutionTensorParameters } from "../../geomeca"
@@ -156,7 +156,7 @@ export class StriatedPlaneKin extends FaultData {
     }
 
     protected getTypeOfMovement(s: string): TypeOfMovement {
-        if (!sensOfMovementExists(s)) {
+        if (!typeOfMovementExists(s)) {
             throw new Error(`Type of movement ${s} is not defined (or incorrectly defined)`)
         }
         return getTypeOfMovementFromString(s)

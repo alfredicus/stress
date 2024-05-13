@@ -1,6 +1,3 @@
-import { Direction } from "readline"
-import { TypeOfMovement } from "../utils"
-
 // export type DataParameters = {
 //     dataNumber?: number,
 //     dataType: string,

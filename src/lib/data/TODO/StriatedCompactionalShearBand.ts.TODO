@@ -7,7 +7,7 @@ import {
 } from "../types"
 import {
     Direction, FaultHelper, TypeOfMovement,
-    directionExists, getDirectionFromString, getTypeOfMovementFromString, sensOfMovementExists
+    directionExists, getDirectionFromString, getTypeOfMovementFromString, typeOfMovementExists
 } from "../utils/FaultHelper"
 import { Tokens, StriatedPlaneProblemType, createStriation, createPlane, createSigma1_nPlaneAngle } from "./types"
 import { DataArgument, DataStatus, createDataArgument, createDataStatus } from "./DataDescription"
@@ -127,7 +127,7 @@ export class StriatedCompactionalShearBand extends NeoformedStriatedPlane {
     }
 
     protected getTypeOfMovement(s: string): TypeOfMovement {
-        if (!sensOfMovementExists(s)) {
+        if (!typeOfMovementExists(s)) {
             throw new Error(`Sens of movement ${s} is not defined (or incorrectly defined)`)
         }
         return getTypeOfMovementFromString(s)
