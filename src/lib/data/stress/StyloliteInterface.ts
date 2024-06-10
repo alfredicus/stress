@@ -5,7 +5,7 @@ import { Engine, HypotheticalSolutionTensorParameters } from "../../geomeca"
 import { DataStatus } from "../DataDescription"
 import { decodePlane } from "../../utils/PlaneHelper"
 import { FractureData } from "./FractureData"
-import { setPositionIfAny } from "../../utils/assertJson"
+import { isPropertyDefined, setPositionIfAny } from "../../utils/assertJson"
 
 /**
  * 
@@ -37,6 +37,9 @@ import { setPositionIfAny } from "../../utils/assertJson"
     // }
 
     initialize(obj: any): DataStatus {
+        // Call of parent class
+        super.initialize(obj)
+
         const plane = decodePlane(obj)
 
         // Calculate the unit vector normal to the Plane
@@ -45,9 +48,6 @@ import { setPositionIfAny } from "../../utils/assertJson"
             dip: plane.dip,
             dipDirection: plane.dipDirection
         })
-
-        // Read position if any
-        setPositionIfAny(obj, this.pos)
 
         return plane.result
     }

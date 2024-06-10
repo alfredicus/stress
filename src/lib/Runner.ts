@@ -37,36 +37,52 @@ export class Runner {
         return this.inv.engine
     }
 
-    addData(buffer: string, fileExtension: string = 'json'): void {
+    addDataset({buffer, fileExtension='json', weight=1}:{buffer: string, fileExtension?: string, weight?: number}): number {
         let jsons: any = undefined
 
         if (fileExtension !== 'json') {
             const fctFilter = filter.Factory.resolve(fileExtension)
             if (fctFilter) {
                 jsons = fctFilter(buffer, {})
-                
+
                 if (!jsons) {
                     throw `Cannot convert your file with extension ${fileExtension} into JSON`
                 }
 
                 jsons = jsons.data
             }
+            else {
+                throw `Cannot retrieve a filter for extension ${fileExtension}`
+            }
         }
         else {
             jsons = JSON.parse(buffer)
         }
 
-        jsons.forEach( json => {
-            const data = DataFactory.create(json.type)
-    
-            if (data) {
-                data.initialize(json)
-                this.inv.addData(data)
-            }
-            else {
-                throw `Unknown data type ${json.type}`
+        let count = 0
+
+        jsons.forEach(json => {
+            json.active ??= true
+            json.weight ??= 1
+
+            if (json.active && json.weight > 0) {
+
+                json.weight *= weight
+                
+                const data = DataFactory.create(json.type)
+
+                if (data) {
+                    data.initialize(json)
+                    this.inv.addData(data)
+                    count++
+                }
+                else {
+                    throw `Unknown data type ${json.type}`
+                }
             }
         })
+
+        return count
     }
 
     setOptions(options) {
@@ -98,7 +114,7 @@ export class Runner {
     getMisfitAngles() {
         this.inv.engine.setHypotheticalStress(this.solution.rotationMatrixW, this.solution.stressRatio)
         const s = this.inv.engine.stress([0, 0, 0]) // a position
-        return this.inv.data.map(d => d.cost({ stress: s }) )
+        return this.inv.data.map(d => d.cost({ stress: s }))
     }
 
     // Formate moi la solution en json...

@@ -65,7 +65,7 @@ export class MonteCarlo implements SearchMethod {
         this.stressRatio0 = stressRatio
     }
 
-    run(data: Data[], misfitCriteriaSolution: MisfitCriteriunSolution): MisfitCriteriunSolution {
+    run(dataset: Data[], misfitCriteriaSolution: MisfitCriteriunSolution): MisfitCriteriunSolution {
         // The optimum stress tensor is calculated by exploring the stress orientations and the stress ratio around the approximate solution Sr (r = rough solution)
         // obtained by the user during the interactive analysis of flow lines on the sphere, Mohr circle diagram, and histogram of signed angular deviations.
         // More precisely, the minimization function is calculated for a set of stress tensors whose orientations are rotated around axes 
@@ -101,31 +101,31 @@ export class MonteCarlo implements SearchMethod {
             rotAxisSpheCoords.phi = Math.random() * 2 * Math.PI
             // theta = random variable representing the colatitude [0, PI)
             //      the arcos function ensures a uniform distribution for theta from a random value:
-            rotAxisSpheCoords.theta = Math.acos( 2*Math.random() - 1)
+            rotAxisSpheCoords.theta = Math.acos(2 * Math.random() - 1)
 
             let rotAxis = spherical2unitVectorCartesian(rotAxisSpheCoords)
 
             // We only consider positive rotation angles around each rotation axis, since the whole sphere is covered by angles (phi,theta)
             let rotAngle = Math.random() * this.rotAngleHalfInterval
-                
+
             // Calculate rotation tensors Drot and DTrot between systems Sr and Sw such that:
             //  Vr  = DTrot Vw        (DTrot is tensor Drot transposed)
             //  Vw = Drot  Vr
 
             // DTrot is the transformation matrix between systems Sw and Sr such that Sr is rotated a clockwise angle = rotAngle along rotation axis rotAxis
-            DTrot = properRotationTensor({nRot: rotAxis, angle: rotAngle})
+            DTrot = properRotationTensor({ nRot: rotAxis, angle: rotAngle })
 
             // Drot is the transformation matrix between systems Sr and Sw such that Sw is rotated an ANTI-clockwise angle = rotAngle along rotation axis rotAxis
             //  Note that the rotation axis is the same vector for references systems Sr and Sw. Its coordinates do not change under rotation about itself.
-            Drot  = transposeTensor(DTrot)
+            Drot = transposeTensor(DTrot)
             // Calculate rotation tensors Wrot and WTrot between systems S and Sw: WTrot = RTrot DTrot, such that:
             //  V   = WTrot Vw        (WTrot is tensor Wrot transposed)
             //  Vw = Wrot  V
             //  S   =  (X, Y, Z ) is the geographic reference frame  oriented in (East, North, Up) directions.
             //  Sw =  (Xw, Yw, Zw ) is the principal reference frame for a fixed node in the search grid (sigma_1, sigma_3, sigma_2) ('w' stands for 'winning' solution)
-            WTrot = multiplyTensors({A: this.RTrot, B: DTrot })
+            WTrot = multiplyTensors({ A: this.RTrot, B: DTrot })
             //  Wrot = Drot Rrot
-            Wrot  = transposeTensor( WTrot )
+            Wrot = transposeTensor(WTrot)
 
             // Stress ratio variation around R = (S2-S3)/(S1-S3)
             let stressRatio = stressRatioMin + Math.random() * stressRatioEffectiveInterval // The strees ratio is in interval [0,1]
@@ -135,15 +135,11 @@ export class MonteCarlo implements SearchMethod {
             // COMMENTED BELOW
             // let STdelta = stressTensorDelta(stressRatio, Wrot, WTrot)
 
-            // const misfit = data.reduce( (previous, current) => {
-            //     return previous + current.cost({stress: STdelta, rot: Wrot}
-            // )} , 0) / data.length
-
             this.engine.setHypotheticalStress(Wrot, stressRatio)
 
-            const misfit = data.reduce((previous, current) => {
-                return previous + current.cost({ stress: this.engine.stress(current.position) })
-            }, 0) / data.length
+            const misfit = dataset.reduce((cost, data) =>
+                cost + data.cost({ stress: this.engine.stress(data.position) }) * data.weight
+            , 0) / dataset.length // WARNING TO THE LENGTH vs WEIGHT
 
             if (misfit < newSolution.misfit) {
                 newSolution.misfit = misfit
@@ -152,15 +148,6 @@ export class MonteCarlo implements SearchMethod {
                 newSolution.stressRatio = stressRatio
                 newSolution.stressTensorSolution = this.engine.S() // was STdelta
             }
-
-            // const misfitSum  = misfitCriteriaSolution.criterion.value(STdelta)
-            // if (misfitSum < misfitCriteriaSolution.misfitSum) {
-            //     misfitCriteriaSolution.misfitSum      = misfitSum
-            //     misfitCriteriaSolution.rotationMatrixD = cloneMatrix3x3(Drot)
-            //     misfitCriteriaSolution.rotationMatrixW = cloneMatrix3x3(Wrot)
-            //     misfitCriteriaSolution.stressRatio    = stressRatio
-            //     changed = true
-            // }
 
             inc++
         }

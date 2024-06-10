@@ -36,6 +36,9 @@ export class ExtensionFracture extends FractureData {
     protected strategy: FractureStrategy = FractureStrategy.ANGLE
 
     initialize(obj: any): DataStatus {
+        // Call of parent class
+        super.initialize(obj)
+
         const plane = decodePlane(obj)
 
         // Calculate the unit vector normal to the Plane
@@ -44,9 +47,6 @@ export class ExtensionFracture extends FractureData {
             dip: plane.dip,
             dipDirection: plane.dipDirection
         })
-
-        // Read position if any
-        setPositionIfAny(obj, this.pos)
 
         return plane.result
     }

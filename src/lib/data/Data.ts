@@ -1,7 +1,8 @@
 import { Engine } from "../geomeca"
 import { HypotheticalSolutionTensorParameters } from "../geomeca/HypotheticalSolutionTensorParameters"
 import { Matrix3x3, Point3D, Vector3 } from "../types/math"
-import { DataStatus } from "./DataDescription"
+import { isPropertyDefined, setPositionIfAny } from "../utils/assertJson"
+import { DataStatus, createDataStatus } from "./DataDescription"
 import { DataParameters } from "./DataParameters"
 
 /**
@@ -18,8 +19,12 @@ export abstract class Data {
         return this.pos
     }
 
-    weight(): number {
+    get weight(): number {
         return this.weight_
+    }
+
+    set weight(w: number) {
+        this.weight_ = w
     }
 
     set active(a: boolean) {
@@ -49,7 +54,22 @@ export abstract class Data {
     /**
      * Replace the constructor
      */
-    abstract initialize(jsonObject: any): DataStatus
+    initialize(jsonObject: any): DataStatus {
+        // Read weight if any
+        if (isPropertyDefined(jsonObject, 'weight')) {
+            this.weight_ = jsonObject['weight']
+        }
+
+        // Read active if any
+        if (isPropertyDefined(jsonObject, 'active')) {
+            this.active_ = jsonObject['active']
+        }
+
+        // Read position if any
+        setPositionIfAny(jsonObject, this.pos)
+
+        return createDataStatus()
+    }
     
     __initialize__(params: DataParameters): DataStatus {
         return undefined
