@@ -1,6 +1,6 @@
 {
     "name": "@alfredo-taboada/stress",
-    "version": "0.0.4",
+    "version": "1.0.0",
     "description": "First course on TypeScript",
     "author": "",
     "keywords": [],
@@ -19,10 +19,8 @@
         "debug-chrome": "node --inspect-brk node_modules/.bin/jest --runInBand --detectOpenHandles src/tests/filters/csv-filter.test.ts"
     },
     "dependencies": {
-        "@youwol/dataframe": "^0.0.38",
         "@youwol/geometry": "^0.0.22",
-        "@youwol/io": "^0.0.25-wip",
-        "@youwol/math": "^0.0.27"
+        "@youwol/io": "^0.0.25-wip"
     },
     "peerDependencies": {},
     "devDependencies": {
