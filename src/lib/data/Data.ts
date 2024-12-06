@@ -14,6 +14,9 @@ export abstract class Data {
     protected active_ = true
     protected pos: Point3D = [0, 0, 0]
     private jsonObject_: any = undefined
+    private filename_ = ''
+    private id_ = -1
+    private type_ = ''
 
     get position(): Point3D {
         return this.pos
@@ -21,6 +24,22 @@ export abstract class Data {
 
     get weight(): number {
         return this.weight_
+    }
+
+    get filename() {
+        return this.filename_
+    }
+
+    get id() {
+        return this.id_
+    }
+
+    get type() {
+        return this.type_
+    }
+
+    set filename(f: string) {
+        this.filename_ = f
     }
 
     set weight(w: number) {
@@ -63,6 +82,16 @@ export abstract class Data {
         // Read active if any
         if (isPropertyDefined(jsonObject, 'active')) {
             this.active_ = jsonObject['active']
+        }
+
+        // Read id if any
+        if (isPropertyDefined(jsonObject, 'id')) {
+            this.id_ = jsonObject['id']
+        }
+
+        // Read type if any
+        if (isPropertyDefined(jsonObject, 'type')) {
+            this.type_ = jsonObject['type']
         }
 
         // Read position if any

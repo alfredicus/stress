@@ -1,9 +1,12 @@
-import { eigen } from "@youwol/math"
 import { InverseMethod, MisfitCriteriunSolution } from "./InverseMethod"
 import { Data, DataFactory } from "./data"
 import { Engine } from "./geomeca"
 import { SearchMethodFactory } from "./search"
 import { filter } from "./filters"
+import { eigen } from "./types"
+import { EIGEN } from "./types/eigen"
+
+const simplified = (n: number, N = 4) => parseFloat(n.toFixed(N))
 
 /**
  * @example
@@ -37,7 +40,7 @@ export class Runner {
         return this.inv.engine
     }
 
-    addDataset({buffer, fileExtension='json', weight=1}:{buffer: string, fileExtension?: string, weight?: number}): number {
+    addDataset({ buffer, fileExtension = 'json', weight = 1, filename }: { buffer: string, fileExtension?: string, weight?: number, filename?: string }): number {
         let jsons: any = undefined
 
         if (fileExtension !== 'json') {
@@ -68,11 +71,12 @@ export class Runner {
             if (json.active && json.weight > 0) {
 
                 json.weight *= weight
-                
+
                 const data = DataFactory.create(json.type)
 
                 if (data) {
                     data.initialize(json)
+                    data.filename = filename // <------------------
                     this.inv.addData(data)
                     count++
                 }
@@ -102,7 +106,7 @@ export class Runner {
 
     run(): any {
         this.solution = this.inv.run()
-        this.displayResults(this.solution)
+        // this.displayResults(this.solution)
         return this.generateJsonSolution(this.solution)
     }
 
@@ -114,7 +118,28 @@ export class Runner {
     getMisfitAngles() {
         this.inv.engine.setHypotheticalStress(this.solution.rotationMatrixW, this.solution.stressRatio)
         const s = this.inv.engine.stress([0, 0, 0]) // a position
-        return this.inv.data.map(d => d.cost({ stress: s }))
+
+        let filename = this.inv.data[0].filename
+        const results: { filename: string, data: { cost: number, id: number, type: string }[] }[] = []
+
+        let result: { filename: string, data: { cost: number, id: number, type: string }[] } = { filename, data: [] }
+        results.push(result)
+
+        for (let i = 0; i < this.inv.data.length; ++i) {
+            const d = this.inv.data[i]
+            if (d.filename !== filename) {
+                results.push(result)
+                filename = d.filename
+                result = { filename, data: [] }
+            }
+            result.data.push({
+                id: d.id, 
+                type: d.type, 
+                cost: simplified(d.cost({ stress: s }))
+            })
+        }
+
+        return results
     }
 
     // Formate moi la solution en json...
@@ -123,21 +148,22 @@ export class Runner {
         const s = this.inv.engine.stress([0, 0, 0])
 
         const stress = solution.stressTensorSolution
-        const eig = eigen([stress[0][0], stress[0][1], stress[0][2], stress[1][1], stress[1][2], stress[2][2]])
+        const eig = EIGEN([stress[0][0], stress[0][1], stress[0][2], stress[1][1], stress[1][2], stress[2][2]])
 
         const sigma1 = [eig.vectors[6], eig.vectors[7], eig.vectors[8]]
         const sigma2 = [eig.vectors[3], eig.vectors[4], eig.vectors[5]]
         const sigma3 = [eig.vectors[0], eig.vectors[1], eig.vectors[2]]
 
         return {
-            cost: this.solution.misfit,
-            stressRatio: solution.stressRatio,
+            cost: simplified(this.solution.misfit),
+            fit: simplified((1 - this.solution.misfit) * 100, 1) + '%',
+            stressRatio: simplified(solution.stressRatio),
             eigenVectors: {
                 S1: sigma1,
                 S2: sigma2,
                 S3: sigma3
             },
-            costs: this.getMisfitAngles() // array of misfits
+            dataset: this.getMisfitAngles() // array of misfits
         }
     }
 

@@ -89,7 +89,7 @@ export class MonteCarlo implements SearchMethod {
 
         let inc = 0
 
-        console.log('Starting the montecarlo search...')
+        // console.log('Starting the montecarlo search...')
 
         let changed = false
         const newSolution = cloneMisfitCriteriunSolution(misfitCriteriaSolution)

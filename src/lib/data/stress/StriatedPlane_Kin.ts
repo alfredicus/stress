@@ -38,6 +38,9 @@ export class StriatedPlaneKin extends FaultData {
      * ``` 
      */
     initialize(jsonObject: any): DataStatus {
+        // Call of parent class
+        super.initialize(jsonObject)
+
         const result = createDataStatus()
         
         // Read parameters definning plane orientation, striation orientation and type of movement

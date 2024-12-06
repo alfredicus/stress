@@ -1,6 +1,7 @@
-import { eigen as EIGEN } from "@youwol/math"
+// import { eigen as EIGEN } from "@youwol/math"
 import { assertNormalizedVector } from "../debug"
 import { SphericalCoords } from "./SphericalCoords"
+import { EIGEN } from "./eigen"
 
 export const Sqrt2 = Math.sqrt(2)
 export const Sqrt2Over2 = Sqrt2/2

@@ -34,24 +34,26 @@ export class OptimisationDirectGenSetSearch implements SearchMethod {
     //      This strategy is implemented in the cost calculation and leads to a nested call of the optimisation method;
     //      The quality of the solution should be higher than for the angular difference criteriun.
 
-    protected misfitW_ = misfitW
+    private engine_: Engine = undefined
 
-    protected Wrot_ = Wrot
-    protected stressRatioW_ = stressRatioW
-    protected WTrot_ : newMatrix3x3()
+    protected misfitW_
+
+    protected Wrot_
+    protected stressRatioW_
+    protected WTrot_ = newMatrix3x3()
 
     // iteration = status of the previous interation: {'Successful', 'Unsuccessful'}
-    protected iteration = 'Successful' 
+    protected iteration = 'Successful'
     // optiVector = "optimal Vector" type minimizing the misfit function in the previous iteration: 
     //                  {'GenSet_1dir', 'Gradient', 'OctantBisector'}
     protected optiVector = 'GenSet_1dir'
 
-    // The intital angular step length depends on the Montecarlo sampling and on the optimisation problem
+    // The initial angular step length depends on the Montecarlo sampling and on the optimisation problem
     protected stepLengthAngle = Math.PI / 180                       // 1°
     // stepLengthAngleMin = minimum angular step length
-    protected stepLengthAngleMin = this.stepLengthAngle / 8         // 0.125°, equivalent to 4 reductions by half of stepLengthAngle
+    protected stepLengthAngleMin = this.stepLengthAngle / 8         // 0.125°, equivalent to 3  reductions by half of stepLengthAngle
     // The intital stress ratio step length depends on the Montecarlo sampling and on the optimisation problem
-    protected stepLengthR =  Math.PI / 180                          // 0.0175      
+    protected stepLengthR = Math.PI / 180                          // 0.0175      
     protected stepLengthRMin = this.stepLengthR / 8                 // PI/900
 
     // k = iteration number (1, 2, ...)
@@ -59,8 +61,28 @@ export class OptimisationDirectGenSetSearch implements SearchMethod {
     // kMax = maximum number of iterations
     // protected kMax = 10 
 
+    // -------------------------------------------------------
+
+    setOptions(json: any): void {
+        // TODO
+    }
+
+    getEngine(): Engine {
+        return this.engine_
+    }
+
+    setEngine(engine: Engine): void {
+        this.engine_ = engine
+    }
+
+    setInteractiveSolution({ rot, stressRatio }: { rot: Matrix3x3, stressRatio: number }): void {
+        // TODO
+    }
+
     run(data: Data[], misfitCriteriaSolution: MisfitCriteriunSolution): MisfitCriteriunSolution {
-    
+
+        const newSolution = cloneMisfitCriteriunSolution(misfitCriteriaSolution)
+
         while ((this.stepLengthAngle > this.stepLengthAngleMin) && (this.stepLengthR > this.stepLengthRMin)) {
             //  The step length in iteration k is greater than the step-length convergence tolerance :
             //      Rotation angles:    stepLengthAngle = step length      stepLengthAngleMin = step-length convergence tolerance
@@ -78,21 +100,21 @@ export class OptimisationDirectGenSetSearch implements SearchMethod {
                     //     This strategy is robust and converges to the local minimum. 
                     // (2) Re-use the same direction while it remains a descent direction;
                     //     This strategy is probably faster yet it may lead to a secondary minimum in highly non-linear problems
-                    SearchSetG()        // Strategy (1) is privileged to improve the quality of the optimized solution
+                    this.searchSetG()        // Strategy (1) is privileged to improve the quality of the optimized solution
 
                 } else if (this.optiVector === 'Gradient') {
                     // The pseudo-gradient direction, approximated from the descent directions, was the optimal solution
                     // The number of 'descent' directions NDD >= 2 in iteration (k-1) 
                     // Strategy (1) is privileged over strategy (2) (re-using the previous pseudo-gradient vector)
                     // Another possible strategy would be to explore directions close to the previous pseudo-gradient vector 
-                    SearchSetG()
+                    this.searchSetG()
                 } else if (this.optiVector === 'OctantBisector') {
                     // There were no descent directions in set G in iteration (k-1), i.e., NDD = 0
                     // The optimal solution was a vector from the set of octant bisectors of the angular space (alpha, beta, gamma): 
                     // explored vectors = 8 octant bisectors (the stress shape ratio is kept constant)
                     // This particular set intends to identify a descent direction for a "nonsmooth" misfit function (e.g. Dennis-Wood function, p. 441, Kolda et al. 2003)
                     // Once again, strategy (1) is privileged over re-using the previous octant direction solution. 
-                    SearchSetG()
+                    this.searchSetG()
 
                 }
 
@@ -105,17 +127,21 @@ export class OptimisationDirectGenSetSearch implements SearchMethod {
 
                 // Search for the optimal minimization direction for the reduced step lengths: explore the set of coordinate directions G, 
                 //      and if indicated, in the gradient and the octant bisectors sets
-                SearchSetG()
+                this.searchSetG()
             }
 
             // The number of interations is increased by one
             this.k = this.k + 1
         }
 
-        return
+        return newSolution
     }
 
-    private SearchSetG() {
+    private searchSetG() {
+        let Urot = new Array(3).fill(undefined).map( a => new Array(3).fill(undefined).map( a => newMatrix3x3() ) ) 
+        let Orot = new Array(3).fill(undefined).map( a => new Array(3).fill(undefined).map( a => newMatrix3x3() ) ) 
+        let OTrot = new Array(3).fill(undefined).map( a => new Array(3).fill(undefined).map( a => newMatrix3x3() ) ) 
+
         // Search the best solution in the directions defined by the generating set search (GSS): G = {e1, e2, e3, e4, -e1, -e2,-e3, -e4}
 
         // Calculate the misfit function for trial stress tensors defined by a step-length angle in the directions of the rotation angles (alpha, beta, gamma).
@@ -123,24 +149,26 @@ export class OptimisationDirectGenSetSearch implements SearchMethod {
         //      Rotation angles are defined around the principal stress directions of the current stress tensor solution (i.e. defined in the 'winning' reference frame Sw)
         //      Note that step-length angles are always small relative to maximum rotation angles [-2 PI, 2 PI] 
 
-        // Urot[1][1], Urot[1][2] = Rotation tensors definning a step-length angle in search directions e1 and -e1 (rotation angle alpha around X1) ('U' stands for 'update' solution)
-        Urot[1][1] = Ualpha( this.stepLengthAngle)
-        Urot[1][2] = Ualpha(-this.stepLengthAngle)
+        // The indexes of Urot[i][j], Oroti][j] and OTroti][j] are shifted one position relative to the stress axis Xi+1 and vectors ei+1 and -ei+1
 
-        // Urot[2][1], Urot[2][2] = Rotation tensors definning a step-length angle in search directions e2 and -e2 (rotation angle beta around X2)
-        Urot[2][1] = Ubeta( this.stepLengthAngle)
-        Urot[2][2] = Ubeta(-this.stepLengthAngle)
+        // Urot[0][0], Urot[0][1] = Rotation tensors definning a step-length angle in search directions e1 and -e1 (rotation angle alpha around X1) ('U' stands for 'update' solution)
+        Urot[0][0] = this.Ualpha(this.stepLengthAngle)
+        Urot[0][1] = this.Ualpha(-this.stepLengthAngle)
 
-        // Urot[3][1], Urot[3][2] = Rotation tensors definning a step-length angle in search directions e3 and -e3 (rotation angle gamma around X3)
-        Urot[3][1] = Ugamma( this.stepLengthAngle)
-        Urot[3][2] = Ugamma(-this.stepLengthAngle)
+        // Urot[1][0], Urot[1][1] = Rotation tensors definning a step-length angle in search directions e2 and -e2 (rotation angle beta around X2)
+        Urot[1][0] = this.Ubeta(this.stepLengthAngle)
+        Urot[1][1] = this.Ubeta(-this.stepLengthAngle)
+
+        // Urot[2][0], Urot[2][1] = Rotation tensors definning a step-length angle in search directions e3 and -e3 (rotation angle gamma around X3)
+        Urot[2][0] = this.Ugamma(this.stepLengthAngle)
+        Urot[2][1] = this.Ugamma(-this.stepLengthAngle)
 
         // The stress ratio R = (S2-S3)/(S1-S3) for these search directions remains constant (R is defined in interval [0,1])
         let stressRatio = this.stressRatioW_
-k
-        for (let i = 1; i <= 3; i++) {
+        
+        for (let i = 0; i <= 2; i++) {
 
-            for (let j = 1; j <= 2; j++) {
+            for (let j = 0; j <= 1; j++) {
 
                 // Calculate rotation tensors Orot and OTrot between systems S and So: Orot = Urot Wrot_ , such that:
                 //  Vo = Orot  V
@@ -155,12 +183,12 @@ k
                 // Calculate the stress tensor STo in reference frame S from the stress tensor in reference frame So
                 // STo is defined according to the continuum mechanics sign convention : compression < 0
                 this.engine.setHypotheticalStress(Orot[i][j], this.stressRatioW_)
- 
+
                 // Define the data or striated plane datum fot midfit calculation ********
 
                 // misfitSetG[i][j] = misfit function for trial search direction defined by rotation tensor Orot[i][j]
                 const misfitSetG[i][j] = data.reduce((previous, current) => {
-                    return previous + current.cost({ stress: this.engine.stress(current.position) })
+                    return previous + current.cost({ stress: this.engine_.stress(current.position) })
                 }, 0) / data.length
 
                 // deltaMisfitSetG[i][j] = variation of the objective function for the trial stress tensor STo[i][j].
@@ -175,47 +203,47 @@ k
         //      The step-length of the stress ratio is defined around the stress ratio of the current stress tensor solution (i.e. defined in the 'winning' reference frame Sw)  
         //      Note that for these two situations, the orientation of the stress tensor remains unchanged, and the rotation tensor is Wrot_
 
-        if ( this.stressRatioW_ < 1 ) {
+        if (this.stressRatioW_ < 1) {
             // Calculate the trial stress tensor by taking a step in direction e4: the stress ratio can be increased from the former winning value, yet it cannot be greater than 1:
-            this.stressRatioG4[1] = Math.min(this.stressRatioW_ + this.stepLengthR, 1)
+            this.stressRatioG4[0] = Math.min(this.stressRatioW_ + this.stepLengthR, 1)
 
             // Calculate the stress tensor STo in reference frame S from the stress tensor in reference frame So
-            this.engine.setHypotheticalStress(this.Wrot_, this.stressRatioG4[1])
+            this.engine.setHypotheticalStress(this.Wrot_, this.stressRatioG4[0])
 
             // Define the data or striated plane datum fot midfit calculation ********
 
-            // misfitSetG[4][1] = misfit function for trial search direction defined by stressRatioG4[1]
-            this.misfitSetG[4][1] = data.reduce((previous, current) => {
-                return previous + current.cost({ stress: this.engine.stress(current.position) })
+            // misfitSetG[3][0] = misfit function for trial search direction defined by stressRatioG4[0]
+            this.misfitSetG[3][0] = data.reduce((previous, current) => {
+                return previous + current.cost({ stress: this.engine_.stress(current.position) })
             }, 0) / data.length
 
-            // deltaMisfitSetG[4][1] = variation of the objective function for the trial stress tensor STo[4][1].
-            this.deltaMisfitSetG[4][1] =this.misfitSetG[4][1] - this.misfitW_
+            // deltaMisfitSetG[3][0] = variation of the objective function for the trial stress tensor STo[3][0].
+            this.deltaMisfitSetG[3][0] = this.misfitSetG[3][0] - this.misfitW_
 
         } else {
             // The stress ratio stress ratio = 1. Thus it cannot be increased and the trial search in direction e4 is not done
-            this.deltaMisfitSetG[4][1] = 0
+            this.deltaMisfitSetG[3][0] = 0
         }
 
-        if ( this.stressRatioW_ > 0 ) {
+        if (this.stressRatioW_ > 0) {
             // Calculate the trial stress tensor by taking a step in direction -e4: 
             // the stress ratio can be decreased from the former winning value, yet it cannot be lower than 0:
-            stressRatioG4[2] = Math.max(this.stressRatioW_ - stepLengthR, 0)
+            stressRatioG4[1] = Math.max(this.stressRatioW_ - stepLengthR, 0)
 
             // Calculate the stress tensor STo in reference frame S from the stress tensor in reference frame So
-            this.engine.setHypotheticalStress(Wrot_, stressRatioG4[2])
+            this.engine.setHypotheticalStress(Wrot_, stressRatioG4[1])
 
-            // misfitSetG[4][2] = misfit function for trial search direction defined by stressRatioG4[2]
-            this.misfitSetG[4][2] = data.reduce((previous, current) => {
-                return previous + current.cost({ stress: this.engine.stress(current.position) })
+            // misfitSetG[3][1] = misfit function for trial search direction defined by stressRatioG4[1]
+            this.misfitSetG[3][1] = data.reduce((previous, current) => {
+                return previous + current.cost({ stress: this.engine_.stress(current.position) })
             }, 0) / data.length
 
-            // deltaMisfitSetG[4][2] = variation of the objective function for the trial stress tensor STo[4][2].
-            this.deltaMisfitSetG[4][2] = misfitSetG[4][2] - this.misfitW_
+            // deltaMisfitSetG[3][1] = variation of the objective function for the trial stress tensor STo[3][1].
+            this.deltaMisfitSetG[3][1] = misfitSetG[3][1] - this.misfitW_
 
         } else {
             // The stress ratio stress ratio = 0. Thus it cannot be decreased and the trial search in direction -e4 is not done
-            this.deltaMisfitSetG[4][2] = 0
+            this.deltaMisfitSetG[3][1] = 0
         }
 
         // nDescentDirs =  number of 'descent' directions for steps in the directions of the generating set search G = {e1, e2, e3, e4, -e1, -e2,-e3, -e4} 
@@ -229,23 +257,23 @@ k
         let deltaMisfitSetG_MinVal_j = 0
 
         // Calculate the minimum
-        for (let i = 1; i <= 4; i++) {
+        for (let i = 0; i <= 3; i++) {
 
-            if ((deltaMisfitSetG[i][1] < 0) || (deltaMisfitSetG[i][2]) < 0) ) {
+            if ((deltaMisfitSetG[i][0] < 0) || (deltaMisfitSetG[i][1]) < 0) ) {
                 // ei and/or -ei are descent direction of the objective function
                 // number of 'descent' directions increases in one 
                 nDescentDirs = nDescentDirs + 1
             }
 
             // deltaMisfitSetG_Min[i] = minimum misfit between the two opposite directions ei and -ei
-            if ((deltaMisfitSetG[i][1] <= deltaMisfitSetG[i][2])) {
-                // deltaMisfitSetG_Min[i] = misfit in direction ei (j=1)
+            if ((deltaMisfitSetG[i][0] <= deltaMisfitSetG[i][1])) {
+                // deltaMisfitSetG_Min[i] = misfit in direction ei+1 (j=0)
+                deltaMisfitSetG_Min[i] = deltaMisfitSetG[i][0]
+                deltaMisfitSetG_Min_j[i] = 0
+            } else {
+                // deltaMisfitSetG_Min[i] = misfit in direction -ei (j=1)
                 deltaMisfitSetG_Min[i] = deltaMisfitSetG[i][1]
                 deltaMisfitSetG_Min_j[i] = 1
-            } else {
-                // deltaMisfitSetG_Min[i] = misfit in direction -ei (j=2)
-                deltaMisfitSetG_Min[i] = deltaMisfitSetG[i][2]
-                deltaMisfitSetG_Min_j[i] = 2
             }
 
             if (deltaMisfitSetG_Min[i] < deltaMisfitSetG_MinVal) {
@@ -257,15 +285,15 @@ k
             }
         }
 
-        if ( nDescentDirs == 0 ) {
+        if (nDescentDirs == 0) {
             // There are no descent directions in set G and the trial steps are 'unsuccessful'. 
             // Nevertheless, we can test a set of exploratory moves without reducuing the length step, in particular to identify 'descent' directions for a "nonsmooth" misfit function 
             //      (e.g. Dennis-Wood function, p. 441, Kolda et al. 2003) 
             // Thus, we will test the set of octant bisectors of the angular space (alpha, beta, gamma): 8 octant bisectors ( the stress shape ratio remains constant)
             //      Octant bisectors are vectors whose components in the angular (3D) space have equal magnitudes ( 1/sqrt(3) ) (e.g., they maximise the angle with the unit vectors ei)
             OctantBisectors()
-
-        else if ( nDescentDirs = 1 ) {
+        }
+        else if (nDescentDirs = 1) {
             // There is only one descent direction of the objective function in the generating set G
             // In such case we move one step in this direction
             this.iteration = 'Successful'
@@ -276,15 +304,15 @@ k
 
             if (deltaMisfitSetG_MinVal_i <= 3)
                 // The descent direction is an angular direction; in such case the rotation matrix Wrot_ is updated (the stress ratio remains unchanged)
-                this.Wrot_ = Orot[deltaMisfitSetG_MinVal_i][deltaMisfitSetG_MinVal_j]
+                this.Wrot_ = Orot[deltaMisfitSetG_MinVal_i - 1][deltaMisfitSetG_MinVal_j - 1]
             else {
                 // The descent direction is the stress ratio (e4 or -e4); in such case the stress ratio is updated (the rotation matrix remains unchanged)
                 this.stressRatioW_ = stressRatioG4[deltaMisfitSetG_MinVal_j]
             }
 
             // The misfit value is updated according to the new minimum value for the objective function
-            this.misfitW_ = this.misfitSetG[ deltaMisfitSetG_MinVal_i ][ deltaMisfitSetG_MinVal_j ]
-        
+            this.misfitW_ = this.misfitSetG[deltaMisfitSetG_MinVal_i][deltaMisfitSetG_MinVal_j]
+
         } else {
             // The number of 'descent' directions >= 2
             // In this situation we chose the optimal solution between 2 trials:
@@ -308,7 +336,7 @@ k
 
                 if (deltaMisfitSetG_MinVal_i <= 3)
                     // The descent direction is an angular direction; in such case the rotation matrix Wrot_ is updated (the stress ratio remains unchanged)
-                    Wrot_ = Orot[deltaMisfitSetG_MinVal_i][deltaMisfitSetG_MinVal_j]
+                    Wrot_ = Orot[deltaMisfitSetG_MinVal_i - 1][deltaMisfitSetG_MinVal_j - 1]
                 else {
                     // The descent direction is the stress ratio (e4 or -e4); in such case the stress ratio is updated (the rotation matrix remains unchanged)
                     stressRatioW_ = stressRatioG4[deltaMisfitSetG_MinVal_j]
@@ -348,23 +376,23 @@ k
                 //          and which may be different for the shape stress ratio (it is proportional to the negative gradient vector if all step lengths are equal)
                 //      This assertion is specially valid for steps lengths that are small  
 
-                if (deltaMisfitSetG_Min_j[i] = 1) {
+                if (deltaMisfitSetG_Min_j[i] = 0) {
                     // The maximum negative variation of the objective function is in direction ei (positive)
                     eiSign = 1
 
-                } else if (deltaMisfitSetG_Min_j[i] = 2) {
+                } else if (deltaMisfitSetG_Min_j[i] = 1) {
                     // The maximum negative variation of the objective function is in direction -ei (negative)
                     eiSign = -1
 
                 } else {
-                    throw ('error: deltaMisfitSetG_Min_j[i] can only be 1 or 2')
-                }    
+                    throw ('error: deltaMisfitSetG_Min_j[i] can only be 0 or 1')
+                }
 
                 // stepGradient[i] = step length in direction 'i', which can be in direction ei or -ei (i.e., positive or negative), depending on the value of eiSign
                 //      The step length is weighted by the partialDerivativeMin, i.e., it is equal to the iteration step length in the maximum descent direction of function f
                 stepGradient[i] = eiSign * stepLengthAngle * deltaMisfitSetG_Min[i] / deltaMisfitSetG_MinVal
 
-            
+
             } else {
                 // If the minimum variation of the objective function in angular directions ei and -ei is positive, then this direction is excluded from the negative gradient vector
                 // This means that the angular rotation in this direction is zero
@@ -372,13 +400,13 @@ k
             }
         }
 
-        if (deltaMisfitSetG_Min[4] < 0) {
+        if (deltaMisfitSetG_Min[3] < 0) {
             // Analysis of the stress ratio direction (e4 and -e4 in the generating set G)
 
             // stepGradient[i] = step length of the shape ratio in the direction that minimizes the misfit function (e4 or -e4 : positive or negative), such that R is in interval [0,1]
             //                   stressRatioG4[j] = trial stress ratio in directions e4 and -e4 for j = 1 and j = 2, respectively
             //                   Note that deltaMisfitSetG_Min[i] / partialDerivativeMin is in interval [0,1]
-            stepGradient[4] = (stressRatioG4[deltaMisfitSetG_Min_j[4]] - this.stressRatioW_ ) * deltaMisfitSetG_Min[i] / partialDerivativeMin
+            stepGradient[3] = (stressRatioG4[deltaMisfitSetG_Min_j[3] - this.stressRatioW_) * deltaMisfitSetG_Min[i] / partialDerivativeMin
 
             // stressRatioG = Stress ratio R = (S2-S3)/(S1-S3) considered in the negative pseudo-gradient direction
             stressRatioG = this.stressRatioW_ + stepGradient[i]
@@ -390,7 +418,7 @@ k
         }
 
         // UGrot[i] = Rotation matrix obtained by superposing three rotations (alpha, beta, gamma) along the three axes (X1, X2, X3) (rotations are superposed from right to left)
-        UGrot = U_AlphaBetaGamma(({ alpha: stepGradient[1], beta: stepGradient[2], gamma: stepGradient[3] })
+        UGrot = U_AlphaBetaGamma({ alpha: stepGradient[0], beta: stepGradient[1], gamma: stepGradient[2] })
 
         // Calculate rotation tensors OBrot and OBTrot between systems S and So: OGrot = UGrot Wrot_ , such that:
         //  Vo = OGrot  V
@@ -408,7 +436,7 @@ k
 
         // misfitSetOG[i] = misfit function for trial search direction defined by rotation tensor OBrot[i]
         const misfitSetOG = data.reduce((previous, current) => {
-                    return previous + current.cost({ stress: this.engine.stress(current.position) })
+            return previous + current.cost({ stress: this.engine.stress(current.position) })
         }, 0) / data.length
 
         // deltaMisfitSetOG[i] = variation of the objective function for the trial stress tensor STo[i].
@@ -418,12 +446,12 @@ k
         return
     }
 
-    private Ualpha(number: stepLengthAngle): Uangle: Matrix3x3 {
+    private Ualpha(stepLengthAngle: number): Matrix3x3 {
         // Calculate rotation tensor Uangle associated with and anticlockwise rotation 'stepLengthAngle' (alpha) of the reference system Sw around axis X (Sigma_1)
         let cosAlpha = Math.cos(stepLengthAngle)
         let sinAlpha = Math.sin(stepLengthAngle)
 
-        private Uangle: Matrix3x3 = undefined
+        let Uangle = newMatrix3x3()
 
         // The lines of tensor Uangle are given by the coordinates in reference system Sw of the unit vectors (nx, ny, nz) defining reference system So 
         // Coords of unit vector nx
@@ -442,12 +470,12 @@ k
         return Uangle
     }
 
-    private Ubeta(number: stepLengthAngle): Uangle: Matrix3x3 {
+    private Ubeta(stepLengthAngle: number): Matrix3x3 {
         // Calculate rotation tensor Uangle associated with and anticlockwise rotation 'stepLengthAngle' (beta) of the reference system Sw around axis Y (Sigma_3)
         let cosBeta = Math.cos(stepLengthAngle)
         let sinBeta = Math.sin(stepLengthAngle)
 
-        private Uangle: Matrix3x3 = undefined
+        let Uangle = newMatrix3x3()
 
         // The lines of tensor Uangle are given by the coordinates in reference system Sw of the unit vectors (nx, ny, nz) defining reference system So 
         // Coords of unit vector nx
@@ -466,12 +494,12 @@ k
         return Uangle
     }
 
-    private Ugamma(number: stepLengthAngle): Uangle: Matrix3x3 {
+    private Ugamma(stepLengthAngle: number): Matrix3x3 {
         // Calculate rotation tensor Uangle associated with and anticlockwise rotation 'stepLengthAngle' (beta) of the reference system Sw around axis Z (Sigma_2)
         let cosGamma = Math.cos(stepLengthAngle)
         let sinGamma = Math.sin(stepLengthAngle)
 
-        private Uangle: Matrix3x3 = undefined
+        let Uangle = newMatrix3x3()
         // The lines of tensor Uangle are given by the coordinates in reference system Sw of the unit vectors (nx, ny, nz) defining reference system So 
         // Coords of unit vector nx
         Uangle[0][0] = cosGamma
@@ -489,7 +517,7 @@ k
         return Uangle
     }
 
-    private U_AlphaBetaGamma({ alpha: number, beta: number, gamma: number }): Uangle: Matrix3x3 {
+    private U_AlphaBetaGamma({ alpha, beta, gamma }: { alpha: number, beta: number, gamma: number }): Matrix3x3 {
         // Calculate rotation tensor Uangle associated with three superposed rotations and anticlockwise rotation 'stepLengthAngle' (beta) of the reference system Sw around axis Z (Sigma_2)
 
         // Uangle = Ualpha Ubeta Ugamma
@@ -501,7 +529,7 @@ k
         let cosGamma = Math.cos(gamma)
         let sinGamma = Math.sin(gamma)
 
-        private Uangle: Matrix3x3 = undefined
+        let Uangle = newMatrix3x3()
 
         // The lines of tensor Uangle are given by the coordinates in reference system Sw of the unit vectors (nx, ny, nz) defining reference system So 
         // Coords of unit vector nx
@@ -534,14 +562,14 @@ k
 
         // UBrot[i] = Rotation matrix obtained by superposing three rotations (alpha, beta, gamma) along the three axes (X1, X2, X3) (rotations are superposed from right to left)
         //          UBrot[i] bisect the eight octants (i.e., they are parallel to lines X / -X = Y / -Y = Z / -Z )
-        UBrot[0] = U_AlphaBetaGamma(({ alpha: rotAngleComp, beta: rotAngleComp, gamma: rotAngleComp })
-        UBrot[1] = U_AlphaBetaGamma(({ alpha: rotAngleComp, beta: rotAngleComp, gamma: - rotAngleComp })
-        UBrot[2] = U_AlphaBetaGamma(({ alpha: rotAngleComp, beta: - rotAngleComp, gamma: rotAngleComp })
-        UBrot[3] = U_AlphaBetaGamma(({ alpha: rotAngleComp, beta: - rotAngleComp, gamma: - rotAngleComp })
-        UBrot[4] = U_AlphaBetaGamma(({ alpha: - rotAngleComp, beta: rotAngleComp, gamma: rotAngleComp })
-        UBrot[5] = U_AlphaBetaGamma(({ alpha: - rotAngleComp, beta: rotAngleComp, gamma: - rotAngleComp })
-        UBrot[6] = U_AlphaBetaGamma(({ alpha: - rotAngleComp, beta: - rotAngleComp, gamma: rotAngleComp })
-        UBrot[7] = U_AlphaBetaGamma(({ alpha: - rotAngleComp, beta: - rotAngleComp, gamma: rotAngleComp })
+        UBrot[0] = U_AlphaBetaGamma({ alpha: rotAngleComp, beta: rotAngleComp, gamma: rotAngleComp })
+        UBrot[1] = U_AlphaBetaGamma({ alpha: rotAngleComp, beta: rotAngleComp, gamma: - rotAngleComp })
+        UBrot[2] = U_AlphaBetaGamma({ alpha: rotAngleComp, beta: - rotAngleComp, gamma: rotAngleComp })
+        UBrot[3] = U_AlphaBetaGamma({ alpha: rotAngleComp, beta: - rotAngleComp, gamma: - rotAngleComp })
+        UBrot[4] = U_AlphaBetaGamma({ alpha: - rotAngleComp, beta: rotAngleComp, gamma: rotAngleComp })
+        UBrot[5] = U_AlphaBetaGamma({ alpha: - rotAngleComp, beta: rotAngleComp, gamma: - rotAngleComp })
+        UBrot[6] = U_AlphaBetaGamma({ alpha: - rotAngleComp, beta: - rotAngleComp, gamma: rotAngleComp })
+        UBrot[7] = U_AlphaBetaGamma({ alpha: - rotAngleComp, beta: - rotAngleComp, gamma: rotAngleComp })
 
         // The stress ratio R = (S2-S3)/(S1-S3) for these search directions remains constant (R is defined in interval [0,1])
         let stressRatio = this.stressRatioW_
@@ -564,7 +592,7 @@ k
 
             // misfitSetOB[i] = misfit function for trial search direction defined by rotation tensor OBrot[i]
             const misfitSetOB[i] = data.reduce((previous, current) => {
-                return previous + current.cost({ stress: this.engine.stress(current.position) })
+                return previous + current.cost({ stress: this.engine.stress(current.position) }) * current.weight
             }, 0) / data.length
 
             // deltaMisfitSetOB[i] = variation of the objective function for the trial stress tensor STo[i].
@@ -572,15 +600,15 @@ k
             deltaMisfitSetOB[i] = misfitSetOB[i] - this.misfitW_
 
         }
-            
+
 
         // nOB_DescentDirs =  number of 'descent' directions for steps in the directions of the octant bisectors set : Hob = {n1, n2, n3, n4, n5, n6, n7, n8}
         //              A 'descent' direction step is such that the value of the objective function decreases relative to the value in the former position 
-        nOB_DescentDirs = 0
+        let nOB_DescentDirs = 0
 
         // Calculate the minimum
-        deltaMisfitSetOB_Min = 0
-        deltaMisfitSetOB_Min_index = 0
+        let deltaMisfitSetOB_Min = 0
+        let deltaMisfitSetOB_Min_index = 0
 
         for (let i = 0; i <= 7; i++) {
 
@@ -595,22 +623,23 @@ k
                     deltaMisfitSetOB_Min_index = i
                 }
         }
-    
+
 
         if (nOB_DescentDirs > 0) {
             // There is at least one direction in the octant-bisectors set for which the objective function decreases. This direction is chosen as the step for the present iteration
-            iteration = 'Successful'
-            optiVector = 'OctantBisector'
+            this.iteration = 'Successful'
+            this.optiVector = 'OctantBisector'
 
             // Update the winning rotation matrix Wrot_, which is defined by the roation matrix of the optimal solution
             // Note that the step-length control parameters remain unchanged
-            Wrot_ = OBrot[deltaMisfitSetOB_Min_index]
+            this.Wrot_ = OBrot[deltaMisfitSetOB_Min_index]
 
         } else {
             // The trials in the octant-bisectors set are not 'descent' directions; therefore the iteration is UNSUCCESFUL.
-            iteration = 'Unsuccessful'
+            this.iteration = 'Unsuccessful'
 
         }
 
         return
     }
+}

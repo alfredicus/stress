@@ -17,6 +17,7 @@ import { doTestStress } from "../doTestStress"
 
 let n7 = [ 1/6, 2/3, 1/6] as Vector3
 n7 = normalizeVector(n7)                // normal to striated plane No 7
+
 const dip7 = Math.atan(Math.sqrt(17))
 const nst7 = [Sqrt2Over2, 0, - Sqrt2Over2] as Vector3 // unit vector parallel to striation
 const strike7 = Math.atan(1/4)

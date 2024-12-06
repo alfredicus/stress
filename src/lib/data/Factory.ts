@@ -41,6 +41,15 @@ export namespace DataFactory {
 // Fault planes
 DataFactory.bind(StriatedPlaneKin, 'striated plane')
 DataFactory.bind(NeoformedStriatedPlane, 'neoformed striated plane')
+
+// Extensional fractures and dilation bands
+DataFactory.bind(DilationBand, 'dilation band')
+DataFactory.bind(ExtensionFracture, 'extension fracture')
+
+// Compresional interfaces and compaction bands
+DataFactory.bind(CompactionBand, 'compaction band')
+DataFactory.bind(StyloliteInterface, 'stylolite interface')
+
 // DataFactory.bind(StriatedPlaneFriction1, 'Striated Plane Friction1')
 // DataFactory.bind(StriatedPlaneFriction2, 'Striated Plane Friction2')
 
@@ -56,10 +65,4 @@ DataFactory.bind(NeoformedStriatedPlane, 'neoformed striated plane')
 // DataFactory.bind(ConjugateDilatantShearBands, 'Conjugate Dilatant Shear Bands 1')
 // DataFactory.bind(ConjugateDilatantShearBands, 'Conjugate Dilatant Shear Bands 2')
 
-// Extensional fractures and dilation bands
-DataFactory.bind(DilationBand, 'dilation band')
-DataFactory.bind(ExtensionFracture, 'extension fracture')
 
-// Compresional interfaces and compaction bands
-DataFactory.bind(CompactionBand, 'compaction band')
-DataFactory.bind(StyloliteInterface, 'stylolite interface')
