@@ -2,8 +2,8 @@ import { Data } from './Data'
 import { CompactionBand } from './stress/CompactionBand'
 import { DilationBand } from './stress/DilationBand'
 import { ExtensionFracture } from './stress/ExtensionFracture'
-import { NeoformedStriatedPlane } from './stress/NeoformedStriatedPlane'
-import { StriatedPlaneKin } from './stress/StriatedPlane_Kin'
+import { NeoformedStriatedPlane } from './fault/NeoformedStriatedPlane'
+import { StriatedPlaneKin } from './fault/StriatedPlane_Kin'
 import { StyloliteInterface } from './stress/StyloliteInterface'
 
 /* eslint @typescript-eslint/no-explicit-any: off -- need to have any here for the factory */

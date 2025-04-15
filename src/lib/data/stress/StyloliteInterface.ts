@@ -3,7 +3,7 @@ import { fromAnglesToNormal } from "../../utils/fromAnglesToNormal"
 import { FractureStrategy } from "../types"
 import { Engine, HypotheticalSolutionTensorParameters } from "../../geomeca"
 import { DataStatus } from "../DataDescription"
-import { decodePlane } from "../../utils/PlaneHelper"
+import { decodePlane } from "../../helpers/PlaneHelper"
 import { FractureData } from "./FractureData"
 import { isPropertyDefined, setPositionIfAny } from "../../utils/assertJson"
 

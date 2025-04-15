@@ -1,7 +1,4 @@
-export * from './FaultHelper'
 export * from './trimAlls'
-export * from './ConjugatePlanesHelper'
-export * from './CompactionShearBandsHelper'
 export * from './numberUtils'
 export * from './fromAnglesToNormal'
 export * from './fromDipAzimToNormal'

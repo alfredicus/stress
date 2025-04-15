@@ -1,5 +1,4 @@
 import { Point3D, Vector3 } from "../types"
-import { Direction, TypeOfMovement } from "../utils"
 
 /**
  * @category Data
@@ -21,47 +20,6 @@ export type FractureParams = {
     pos?: Point3D, 
     strategy?: FractureStrategy, 
     weight?: number
-}
-
-/**
- * - DYNAMIC is related to forces (or stresses)
- * - KINEMATIC is related to displacement field
- * @category Data
- */
-export enum StriatedPlaneProblemType {
-    DYNAMIC,
-    KINEMATIC
-}
-
-export type Plane = {
-    strike: number,
-    dip: number,
-    dipDirection: Direction
-}
-export function createPlane(): Plane {
-    return {
-        strike: 0,
-        dip: 0,
-        dipDirection: Direction.UND
-    }
-}
-
-export type Striation = {
-    rake: number,
-    strikeDirection: Direction,
-    trendIsDefined: boolean
-    trend: number,
-    typeOfMovement: TypeOfMovement
-}
-
-export function createStriation(): Striation {
-    return {
-        rake: 0,
-        strikeDirection: Direction.UND,
-        trendIsDefined: true,
-        trend: 0,
-        typeOfMovement: TypeOfMovement.UND
-    }
 }
 
 export type Line = {

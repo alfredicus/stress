@@ -22,7 +22,7 @@ export type MonteCarloParams = {
 /**
  * @category Search-Method
  */
-export class MonteCarlo implements SearchMethod {
+export class MonteCarlo extends SearchMethod {
     private rotAngleHalfInterval: number
     private nbRandomTrials: number
     private stressRatioHalfInterval: number
@@ -34,6 +34,7 @@ export class MonteCarlo implements SearchMethod {
     constructor(
         { stressRatio = 0.5, stressRatioHalfInterval = 0.25, rotAngleHalfInterval = Math.PI, nbRandomTrials = 1000, Rrot = newMatrix3x3Identity() }:
             MonteCarloParams = {}) {
+        super()
         this.rotAngleHalfInterval = rotAngleHalfInterval
         this.nbRandomTrials = nbRandomTrials
         this.stressRatio0 = stressRatio
@@ -139,7 +140,7 @@ export class MonteCarlo implements SearchMethod {
 
             const misfit = dataset.reduce((cost, data) =>
                 cost + data.cost({ stress: this.engine.stress(data.position) }) * data.weight
-            , 0) / dataset.length // WARNING TO THE LENGTH vs WEIGHT
+                , 0) / dataset.length // WARNING TO THE LENGTH vs WEIGHT
 
             if (misfit < newSolution.misfit) {
                 newSolution.misfit = misfit
@@ -150,6 +151,11 @@ export class MonteCarlo implements SearchMethod {
             }
 
             inc++
+
+            const cur = i / this.nbRandomTrials * 100
+            if (cur % 10 === 0) {
+                this.sendMessage(`${cur}`)
+            }
         }
         return newSolution
 

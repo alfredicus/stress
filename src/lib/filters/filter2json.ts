@@ -1,9 +1,6 @@
 import { Vector3 } from "../types"
-import {
-    Direction, StriationType, TypeOfMovement, getDirectionFromString, 
-    getStrengthAngleTypeFromString, getStriationTypeFromString, 
-    getTypeOfMovementFromString, toFloat, toInt, trimAll
-} from "../utils"
+import { toFloat, toInt, trimAll } from "../utils"
+import { CDirection, CStrengthAngleType, CStriationType, CTypeOfMovement, Direction, StriationType, TypeOfMovement } from "../data/fault/types"
 
 /**
  * Usage:
@@ -20,7 +17,7 @@ import {
 export namespace filter {
 
     export function preprocessBuffer(buffer: string): string[] {
-        return buffer.split('\n').filter( (value: string) => trimAll(value).length )
+        return buffer.split('\n').filter((value: string) => trimAll(value).length)
     }
 
     export namespace header {
@@ -100,20 +97,20 @@ __translate__.set('z', 'z')
 const __convert__: Map<string, (s: string) => filter.anyType> = new Map()
 __convert__.set('strike', s => toFloat(s))
 __convert__.set('dip', s => toFloat(s))
-__convert__.set('dipDirection', s => getDirectionFromString(s))
+__convert__.set('dipDirection', s => CDirection.fromString(s))
 __convert__.set('rake', s => toFloat(s))
-__convert__.set('strikeDirection', s => getDirectionFromString(s))
+__convert__.set('strikeDirection', s => CDirection.fromString(s))
 __convert__.set('striationTrend', s => toFloat(s))
-__convert__.set('striationType', s => getStriationTypeFromString(s))
-__convert__.set('typeOfMovement', s => getTypeOfMovementFromString(s))
+__convert__.set('striationType', s => CStriationType.fromString(s))
+__convert__.set('typeOfMovement', s => CTypeOfMovement.fromString(s))
 __convert__.set('strikeBed', s => toFloat(s))
 __convert__.set('dipBed', s => toFloat(s))
-__convert__.set('dipDirectionBed', s => getDirectionFromString(s))
+__convert__.set('dipDirectionBed', s => CDirection.fromString(s))
 __convert__.set('lineTrend', s => toFloat(s))
 __convert__.set('linePlunge', s => toFloat(s))
 __convert__.set('deformationPhase', s => toInt(s))
 __convert__.set('relativeWeight', s => toFloat(s))
-__convert__.set('strengthAngle', s => getStrengthAngleTypeFromString(s))
+__convert__.set('strengthAngle', s => CStrengthAngleType.fromString(s))
 __convert__.set('minAngle', s => toFloat(s))
 __convert__.set('maxAngle', s => toFloat(s))
 __convert__.set('scale', s => toFloat(s))

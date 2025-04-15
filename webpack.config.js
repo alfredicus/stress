@@ -6,6 +6,7 @@ const DESTINATION = path.resolve(__dirname, 'dist');
 
 module.exports = {
     context: ROOT,
+    mode: "development",
     entry: {
         'main': './index.ts'
     },
@@ -15,7 +16,10 @@ module.exports = {
         umdNamedDefine: true,
         library: pkg.name,
         filename: pkg.name + ".js",
-        globalObject: `(typeof self !== 'undefined' ? self : this)`
+        globalObject: `(typeof self !== 'undefined' ? self : this)`,
+        devtoolModuleFilenameTemplate: (info) => {
+            return `file:///${info.absoluteResourcePath.replace(/\\/g, '/')}`;
+        }
     },
     resolve: {
         extensions: ['.ts', 'tsx', '.js'],
@@ -34,8 +38,8 @@ module.exports = {
                 test: /\.ts$/,
                 use: [
                     { loader: 'ts-loader' },
-                  ],
-                  exclude: /node_modules/,
+                ],
+                exclude: /node_modules/,
             }
         ],
     },

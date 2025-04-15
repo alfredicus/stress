@@ -16,7 +16,7 @@ export * from './stress/ExtensionFracture'
 // export * from './StriatedDilatantShearBand'
 // export * from './StriatedPlane_Friction1'
 // export * from './StriatedPlane_Friction2'
-export * from './stress/StriatedPlane_Kin'
+export * from './fault/StriatedPlane_Kin'
 export * from './stress/StyloliteInterface'
 // export * from './StyloliteTeeth'
 

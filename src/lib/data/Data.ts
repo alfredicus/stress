@@ -73,7 +73,7 @@ export abstract class Data {
     /**
      * Replace the constructor
      */
-    initialize(jsonObject: any): DataStatus {
+    initialize(jsonObject: Record<string, any>): DataStatus {
         // Read weight if any
         if (isPropertyDefined(jsonObject, 'weight')) {
             this.weight_ = jsonObject['weight']

@@ -3,7 +3,7 @@ import { fromAnglesToNormal } from "../../utils/fromAnglesToNormal"
 import { FractureStrategy } from "../types"
 import { Engine, HypotheticalSolutionTensorParameters } from "../../geomeca"
 import { DataStatus } from "../DataDescription"
-import { decodePlane } from "../../utils/PlaneHelper"
+import { decodePlane } from "../../helpers/PlaneHelper"
 import { FractureData } from "./FractureData"
 import { setPositionIfAny } from "../../utils/assertJson"
 
@@ -24,7 +24,7 @@ import { setPositionIfAny } from "../../utils/assertJson"
 /**
  * @brief Represent an observed and measured joint
  * 
- * An extension fracture is represented by a  Its orientation in space is definedby three parameters, as follows:
+ * An extension fracture is represented by a plane. Its orientation in space is defined by three parameters, as follows:
  *      Strike: clockwise angle measured from the North direction [0, 360)
  *      Dip: vertical angle, measured downward, between the horizontal and the line of greatest slope in an inclined plane [0, 90]
  *      Dip direction: (N, E, S, W) or a combination of two directions (NE, SE, SW, NW).

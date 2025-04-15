@@ -1,5 +1,5 @@
 import { Point3D } from "../types"
-import { Direction, TypeOfMovement, getDirectionFromString, getTypeOfMovementFromString } from "./FaultHelper"
+import { CDirection, CTypeOfMovement, Direction, TypeOfMovement } from "../data/fault/types"
 
 export function assertPropertyDefined(jsonObject: any, property: string) {
     if (jsonObject[property] === undefined) {
@@ -35,7 +35,7 @@ export function isDirectionDefined(jsonObject: any, property: string): boolean {
     if (jsonObject[property] === undefined) return false
     if (typeof jsonObject[property] !== "string") return false
 
-    if (getDirectionFromString(jsonObject[property]) === Direction.UND) {
+    if (CDirection.fromString(jsonObject[property]) === Direction.UND) {
         return false
     }
     return true
@@ -45,14 +45,14 @@ export function getDirection(jsonObject: any, property: string): Direction {
     if (!isDirectionDefined(jsonObject, property)) {
         return Direction.UND
     }
-    return getDirectionFromString(jsonObject[property])
+    return CDirection.fromString(jsonObject[property])
 }
 
 export function isTypeOfMovementDefined(jsonObject: any, property: string): boolean {
     if (jsonObject[property] === undefined) return false
     if (typeof jsonObject[property] !== "string") return false
 
-    if (getTypeOfMovementFromString(jsonObject[property]) === TypeOfMovement.ERROR) {
+    if (CTypeOfMovement.fromString(jsonObject[property]) === TypeOfMovement.ERROR) {
         return false
     }
     return true
@@ -62,7 +62,7 @@ export function getTypeOfMovement(jsonObject: any, property: string): TypeOfMove
     if (!isTypeOfMovementDefined(jsonObject, property)) {
         return TypeOfMovement.ERROR
     }
-    return getTypeOfMovementFromString(jsonObject[property])
+    return CTypeOfMovement.fromString(jsonObject[property])
 }
 
 export function setPositionIfAny(obj: any, p: Point3D): void {

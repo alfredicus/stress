@@ -1,5 +1,5 @@
 import { deg2rad, spherical2unitVectorCartesian, SphericalCoords } from "../types"
-import { Direction } from "./FaultHelper"
+import { Direction } from "../data/fault/types"
 
 /**
  * @param parameters 

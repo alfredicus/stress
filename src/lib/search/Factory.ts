@@ -18,14 +18,21 @@ export namespace SearchMethodFactory {
             const searchMethod = new M(params)
             // to be filled
             if (params !== undefined) {
-                const ist = params.interactiveStressTensor
+                const ist = params.interactiveStressTensor ?? {
+                    trendS1: 0,
+                    trendS3: 90,
+                    plungeS1: 0,
+                    plungeS3: 0,
+                    masterStress: MasterStress.Sigma1,
+                    stressRatio: 0.5
+                }
                 const st = new StressTensor({
-                    trendS1: ist.trendS1,
-                    trendS3: ist.trendS3,
-                    plungeS1: ist.plungeS1,
-                    plungeS3: ist.plungeS3,
+                    trendS1: ist.trendS1 ?? 0,
+                    trendS3: ist.trendS3 ?? 90,
+                    plungeS1: ist.plungeS1 ?? 0,
+                    plungeS3: ist.plungeS3 ?? 0,
                     masterStress: ist.masterStress==='Sigma1' ? MasterStress.Sigma1 : MasterStress.Sigma3,
-                    stressRatio: ist.stressRatio
+                    stressRatio: ist.stressRatio ?? 0.5
                 })
                 searchMethod.setInteractiveSolution({rot: st.Rrot, stressRatio: st.stressRatio})
             }

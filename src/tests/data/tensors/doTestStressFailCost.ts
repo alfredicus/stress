@@ -1,5 +1,5 @@
 import { Data, DataFactory, Vector3 } from "../../../lib"
-import { FaultData } from "../../../lib/data/stress/FaultData"
+import { FaultData } from "../../../lib/data/fault/FaultData"
 import { FractureData } from "../../../lib/data/stress/FractureData"
 import { HomogeneousEngine, HypotheticalSolutionTensorParameters } from "../../../lib/geomeca"
 import { expectVector } from "../../types/expectAlgebra"
