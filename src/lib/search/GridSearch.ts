@@ -33,7 +33,7 @@ export type ExposedGridSearchParams = {
 /**
  * @category Search-Method
  */
-export class GridSearch implements SearchMethod {
+export class GridSearch extends SearchMethod {
     private deltaGridAngle = 0
     private GridAngleHalfIntervalS = 0
     private stressRatioHalfInterval = 0
@@ -50,6 +50,7 @@ export class GridSearch implements SearchMethod {
         // Rrot=newMatrix3x3Identity(),
         // stressRatio=0.5
     }: GridSearchParams = {}) {
+        super()
         this.deltaGridAngle = deltaGridAngle
         this.GridAngleHalfIntervalS = GridAngleHalfIntervalS
         this.stressRatioHalfInterval = stressRatioHalfInterval
@@ -60,6 +61,16 @@ export class GridSearch implements SearchMethod {
 
     setEngine(engine: Engine): void {
         this.engine = engine
+    }
+
+    getEngine(): Engine {
+        return this.engine
+    }
+
+    setOptions(json: any): void {
+        // if (json.nbIter !== undefined) {
+        //     this.setNbIter(json.nbIter)
+        // }
     }
 
     setInteractiveSolution({rot, stressRatio}:{rot: Matrix3x3, stressRatio: number}): void {
@@ -149,7 +160,9 @@ export class GridSearch implements SearchMethod {
 
                             // Calculate the stress tensor STdelta in reference frame S from the stress tensor in reference frame Sw
                             const STdelta = stressTensorDelta(stressRatio, Wrot, WTrot)
-                            this.engine.setRemoteStress(STdelta)
+
+                            // !!! ALFREDO
+                            // this.engine.setRemoteStress(STdelta)
 
                             const misfit = data.reduce( (previous, current) => {
                                 return previous + current.cost({stress: this.engine.stress(current.position)}
@@ -165,7 +178,6 @@ export class GridSearch implements SearchMethod {
 
                             inc++
                         }
-            
                     }                
                 }
             }

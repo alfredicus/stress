@@ -1,6 +1,6 @@
 import { MasterStress, StressTensor } from '../types'
 import { DebugSearch } from './DebugSearch'
-// import { GridSearch } from './GridSearch'
+import { GridSearch } from './GridSearch'
 import { MonteCarlo } from './MonteCarlo'
 import { SearchMethod } from './SearchMethod'
 
@@ -16,7 +16,9 @@ export namespace SearchMethodFactory {
         const M = map_.get(name)
         if (M) {
             const searchMethod = new M(params)
+
             // to be filled
+            /*
             if (params !== undefined) {
                 const ist = params.interactiveStressTensor ?? {
                     trendS1: 0,
@@ -36,6 +38,7 @@ export namespace SearchMethodFactory {
                 })
                 searchMethod.setInteractiveSolution({rot: st.Rrot, stressRatio: st.stressRatio})
             }
+            */
             return searchMethod
         }
         return undefined
@@ -51,6 +54,6 @@ export namespace SearchMethodFactory {
 
 }
 
-// SearchMethodFactory.bind(GridSearch, 'Grid Search')
+SearchMethodFactory.bind(GridSearch, 'Grid Search')
 SearchMethodFactory.bind(DebugSearch, 'Debug Search')
 SearchMethodFactory.bind(MonteCarlo, 'Monte Carlo')

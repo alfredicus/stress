@@ -2,9 +2,20 @@ import { createDataStatus } from "../data"
 import { CDirection, Direction } from "../data/fault/types"
 import { assertNumberDefined, getDirection, isPropertyDefined } from "../utils/assertJson"
 
+
+/**
+ * @brief Decode a plane from a JSON object
+ * @remarks This function decodes the plane orientation from a JSON object.
+ * @remarks It checks the strike, dip, and dip direction properties.
+ * @remarks It returns an object containing the decoded plane parameters and a status indicating success or failure.
+ * @remarks The status includes messages for any errors encountered during decoding.
+ * @returns An object with the decoded plane parameters and a status.
+*/
 export function decodePlane(obj: any) {
+    // Must be removed in the future
     assertNumberDefined(obj, 'strike')
     assertNumberDefined(obj, 'dip')
+    
     let strike = obj.strike
     let dip = obj.dip
     let dipDirection = Direction.ERROR
@@ -75,20 +86,6 @@ export function decodePlane(obj: any) {
         dipDirection = Direction.UND
     }
 
-    /*
-    const r = {
-        result: {
-            status,
-            messages
-        },
-        dip,
-        strike,
-        dipDirection
-    }
-    r.result.status
-    r.dip
-    ...
-    */
     return {
         result,
         dip,

@@ -66,6 +66,12 @@ export abstract class Data {
         return false
     }
 
+    /**
+     * @brief Get the number of linked data.
+     * This is used to know how many data are linked to this datum.
+     * For example, a fault has one linked data (the fault itself), while a stress tensor has no linked data.
+     * @returns The number of linked data.
+     */
     nbLinkedData(): number {
         return 1
     }
@@ -99,7 +105,7 @@ export abstract class Data {
 
         return createDataStatus()
     }
-    
+
     __initialize__(params: DataParameters): DataStatus {
         return undefined
     }

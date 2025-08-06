@@ -6,14 +6,23 @@ import { NeoformedStriatedPlane } from './fault/NeoformedStriatedPlane'
 import { StriatedPlaneKin } from './fault/StriatedPlane_Kin'
 import { StyloliteInterface } from './stress/StyloliteInterface'
 
+export type DataFields = {
+    mandatory: string[],
+    optional?: string[]
+}
+
 /* eslint @typescript-eslint/no-explicit-any: off -- need to have any here for the factory */
 export namespace DataFactory {
 
     const map_: Map<string, any> = new Map()
+    const mapFields_: Map<string, DataFields> = new Map()
 
-    export const bind = (obj: any, name: string = '') => {
+    export const bind = (obj: any, name: string, fields: DataFields = { mandatory: [], optional: [] }) => {
         const className = name.length === 0 ? obj.name : name
         map_.set(className.toLowerCase(), obj)
+        const mandatory = fields.mandatory.map((f: string) => f.toLowerCase())
+        const optional = fields.optional ? fields.optional.map((f: string) => f.toLowerCase()) : []
+        mapFields_.set(className.toLowerCase(), { mandatory, optional })
     }
 
     export const create = (name: string, params: any = undefined): Data => {
@@ -36,33 +45,43 @@ export namespace DataFactory {
         return data.constructor.name
     }
 
+    export const fields = (name: string): DataFields => {
+        return mapFields_.get(name.toLowerCase())
+    }
+
 }
 
-// Fault planes
-DataFactory.bind(StriatedPlaneKin, 'striated plane')
-DataFactory.bind(NeoformedStriatedPlane, 'neoformed striated plane')
+// -------------------------- BINDING DATA CLASSES ----------------------------
 
-// Extensional fractures and dilation bands
-DataFactory.bind(DilationBand, 'dilation band')
-DataFactory.bind(ExtensionFracture, 'extension fracture')
+// Extension fractures, joints, and so forth...
+{
+    const fractureFields: DataFields = {
+        mandatory: ['strike', 'dip'],
+        optional: ['dip direction', 'deformation phase']
+    }
 
-// Compresional interfaces and compaction bands
-DataFactory.bind(CompactionBand, 'compaction band')
-DataFactory.bind(StyloliteInterface, 'stylolite interface')
+    DataFactory.bind(ExtensionFracture, 'extension fracture', fractureFields)
+    DataFactory.bind(ExtensionFracture, 'joint', fractureFields)
+    DataFactory.bind(ExtensionFracture, 'dyke', fractureFields)
 
-// DataFactory.bind(StriatedPlaneFriction1, 'Striated Plane Friction1')
-// DataFactory.bind(StriatedPlaneFriction2, 'Striated Plane Friction2')
+    DataFactory.bind(StyloliteInterface, 'stylolite interface', fractureFields)
+    DataFactory.bind(CompactionBand, 'compaction band', fractureFields)
+    DataFactory.bind(DilationBand, 'dilation band', fractureFields)
+}
 
-// Striated shear bands
-// DataFactory.bind(StriatedDilatantShearBand, 'Striated Dilatant Shear Band')
-// DataFactory.bind(StriatedCompactionalShearBand, 'Striated Compactional Shear Band')
-
-// Conjugate fault planes and deformation bands
-// DataFactory.bind(ConjugateFaults, 'Conjugate Faults 1')
-// DataFactory.bind(ConjugateFaults, 'Conjugate Faults 2')
-// DataFactory.bind(ConjugateCompactionalShearBands, 'Conjugate Compactional Shear Bands 1')
-// DataFactory.bind(ConjugateCompactionalShearBands, 'Conjugate Compactional Shear Bands 2')
-// DataFactory.bind(ConjugateDilatantShearBands, 'Conjugate Dilatant Shear Bands 1')
-// DataFactory.bind(ConjugateDilatantShearBands, 'Conjugate Dilatant Shear Bands 2')
-
+// Striation
+{
+    const striationFields: DataFields = {
+        mandatory: ['rake','strike direction'],
+        optional: ['type of movement']
+    }
+    const striationSubHorizontalFields: DataFields = {
+        mandatory: ['striation trend'],
+        optional: ['type of movement']
+    }
+    DataFactory.bind(StriatedPlaneKin, 'striated plane', striationFields)
+    DataFactory.bind(StriatedPlaneKin, 'striated subhorizontal plane', striationSubHorizontalFields)
+    DataFactory.bind(NeoformedStriatedPlane, 'neoformed striated plane', striationFields)
+    DataFactory.bind(NeoformedStriatedPlane, 'neoformed subhorizontal striated plane', striationSubHorizontalFields)
+}
 

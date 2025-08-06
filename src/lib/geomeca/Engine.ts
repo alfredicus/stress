@@ -11,5 +11,8 @@ export interface Engine {
     stressRatio(): number
     S(): Matrix3x3
 
+    // TODO
+    // displ(p: Vector3): HypotheticalSolutionTensorParameters
+    
     stress(p: Vector3): HypotheticalSolutionTensorParameters
 }

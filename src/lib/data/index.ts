@@ -3,6 +3,7 @@ export * from './DataDescription'
 export * from './DataParameters'
 export * from './Factory'
 export * from './types'
+export * from './DataFieldsHelper'
 
 // export * from './ConjugateCompactionalShearBands'
 // export * from './ConjugateDilatantShearBands'

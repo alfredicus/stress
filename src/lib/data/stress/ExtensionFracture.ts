@@ -5,7 +5,7 @@ import { Engine, HypotheticalSolutionTensorParameters } from "../../geomeca"
 import { DataStatus } from "../DataDescription"
 import { decodePlane } from "../../helpers/PlaneHelper"
 import { FractureData } from "./FractureData"
-import { setPositionIfAny } from "../../utils/assertJson"
+import { isPropertyDefined, setPositionIfAny } from "../../utils/assertJson"
 
 /*
     // Mandatory data: 
@@ -35,6 +35,14 @@ export class ExtensionFracture extends FractureData {
     // protected nPlane: Vector3 = undefined
     protected strategy: FractureStrategy = FractureStrategy.ANGLE
 
+    /**
+     * @brief Initialize the data from a JSON object
+     * @remarks This function decodes the plane orientation and sets the normal vector of the plane
+     * @remarks It also sets the position of the data if provided in the JSON object.
+     * @remarks The position is set using the `setPositionIfAny` utility function.
+     * @remarks The function returns a DataStatus object indicating the result of the initialization.
+     * @remarks The DataStatus object contains information about the success or failure of the initialization.
+     */
     initialize(obj: any): DataStatus {
         // Call of parent class
         super.initialize(obj)

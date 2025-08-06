@@ -227,7 +227,7 @@ export class NeoformedStriatedPlane extends StriatedPlaneKin {
                 const misfit = Math.min(...OmegaMC)
                 if (misfit === OmegaMC[1]) {
                     throw 'The minimum rotation angle for neoformed striated plane ' + this.noPlane + ' corresponds to the middle point in the Mohr circle'
-                        + ' Thus the rotation angle is not a simple monotonic function!'
+                        + '. Thus the rotation angle is not a simple monotonic function!'
                 }
 
                 // -----------------------
