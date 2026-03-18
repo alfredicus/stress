@@ -1,18 +1,44 @@
 import { Data } from "../data"
 import { Engine, HomogeneousEngine } from "../geomeca"
 import { cloneMisfitCriteriunSolution, MisfitCriteriunSolution } from "../InverseMethod"
-import { cloneMatrix3x3, deg2rad, Matrix3x3, newMatrix3x3, newMatrix3x3Identity } from "../types/math"
+import { cloneMatrix3x3, deg2rad, Matrix3x3, newMatrix3x3 } from "../types/math"
 import { multiplyTensors, transposeTensor } from "../types/math"
 import { SearchMethod } from "./SearchMethod"
 import { stressTensorDelta } from "./utils"
 
 export type GridSearchParams = {
-    deltaGridAngle?: number,
-    GridAngleHalfIntervalS?: number,
-    stressRatioHalfInterval?: number,
-    deltaStressRatio?: number,
-    // Rrot?: Matrix3x3,
-    // stressRatio?: number
+    deltaGridAngle?: number
+    GridAngleHalfIntervalS?: number
+    stressRatioHalfInterval?: number
+    deltaStressRatio?: number
+
+    /**
+     * Number of free dimensions to sweep (2, 3, or 4).
+     * Informational — the actual axes swept are controlled by sweepPhi/Theta/Alpha/R.
+     * Default: 4 (all axes free).
+     */
+    dimension?: 2 | 3 | 4
+
+    /** Sweep the φ (roll) Euler-angle offset?  Default: true */
+    sweepPhi?: boolean
+    /** Sweep the θ (pitch) Euler-angle offset? Default: true */
+    sweepTheta?: boolean
+    /** Sweep the α (yaw) Euler-angle offset?   Default: true */
+    sweepAlpha?: boolean
+    /** Sweep the stress ratio R?               Default: true */
+    sweepR?: boolean
+
+    /**
+     * Fixed stress ratio value used when sweepR = false.
+     * Defaults to the value set by setInteractiveSolution() (stressRatio0).
+     */
+    fixedR?: number
+    /** Fixed φ offset (degrees) used when sweepPhi  = false. Default: 0 */
+    fixedPhi?: number
+    /** Fixed θ offset (degrees) used when sweepTheta = false. Default: 0 */
+    fixedTheta?: number
+    /** Fixed α offset (degrees) used when sweepAlpha = false. Default: 0 */
+    fixedAlpha?: number
 }
 
 export type ExposedGridSearchParams = {
@@ -31,6 +57,17 @@ export type ExposedGridSearchParams = {
 }
 
 /**
+ * Grid search over a 2-, 3-, or 4-dimensional parameter space around an
+ * interactive starting solution.
+ *
+ * The four axes are:
+ *   φ (roll), θ (pitch), α (yaw) — Euler-angle offsets around the starting Rrot
+ *   R — stress ratio offset around stressRatio0
+ *
+ * Set sweepX = false to fix that axis at its `fixedX` value (default 0 offset /
+ * stressRatio0 for R).  Exactly `dimension` axes should be free (not enforced,
+ * but the intent).
+ *
  * @category Search-Method
  */
 export class GridSearch extends SearchMethod {
@@ -42,170 +79,142 @@ export class GridSearch extends SearchMethod {
     private stressRatio0 = 0
     private engine: Engine = new HomogeneousEngine()
 
+    // Dimensionality flags (defaults → 4D)
+    private sweepPhi:   boolean
+    private sweepTheta: boolean
+    private sweepAlpha: boolean
+    private sweepR:     boolean
+    private fixedR:     number | undefined
+    private fixedPhiRad:   number
+    private fixedThetaRad: number
+    private fixedAlphaRad: number
+
     constructor({
-        deltaGridAngle=1,
-        GridAngleHalfIntervalS=30,
-        stressRatioHalfInterval=0.2,
-        deltaStressRatio=0.01,
-        // Rrot=newMatrix3x3Identity(),
-        // stressRatio=0.5
+        deltaGridAngle         = 1,
+        GridAngleHalfIntervalS = 30,
+        stressRatioHalfInterval = 0.2,
+        deltaStressRatio       = 0.01,
+        sweepPhi               = true,
+        sweepTheta             = true,
+        sweepAlpha             = true,
+        sweepR                 = true,
+        fixedR,
+        fixedPhi   = 0,
+        fixedTheta = 0,
+        fixedAlpha = 0,
     }: GridSearchParams = {}) {
         super()
-        this.deltaGridAngle = deltaGridAngle
-        this.GridAngleHalfIntervalS = GridAngleHalfIntervalS
+        this.deltaGridAngle          = deltaGridAngle
+        this.GridAngleHalfIntervalS  = GridAngleHalfIntervalS
         this.stressRatioHalfInterval = stressRatioHalfInterval
-        this.deltaStressRatio = deltaStressRatio
-        // this.Rrot = Rrot
-        // this.stressRatio0 = stressRatio
+        this.deltaStressRatio        = deltaStressRatio
+        this.sweepPhi                = sweepPhi
+        this.sweepTheta              = sweepTheta
+        this.sweepAlpha              = sweepAlpha
+        this.sweepR                  = sweepR
+        this.fixedR                  = fixedR
+        this.fixedPhiRad             = deg2rad(fixedPhi)
+        this.fixedThetaRad           = deg2rad(fixedTheta)
+        this.fixedAlphaRad           = deg2rad(fixedAlpha)
     }
 
-    setEngine(engine: Engine): void {
-        this.engine = engine
-    }
+    setEngine(engine: Engine): void { this.engine = engine }
+    getEngine(): Engine             { return this.engine }
+    setOptions(_json: any): void    {}
 
-    getEngine(): Engine {
-        return this.engine
-    }
-
-    setOptions(json: any): void {
-        // if (json.nbIter !== undefined) {
-        //     this.setNbIter(json.nbIter)
-        // }
-    }
-
-    setInteractiveSolution({rot, stressRatio}:{rot: Matrix3x3, stressRatio: number}): void {
-        this.Rrot = rot
+    setInteractiveSolution({ rot, stressRatio }: { rot: Matrix3x3; stressRatio: number }): void {
+        this.Rrot        = rot
         this.stressRatio0 = stressRatio
     }
 
-    /**
-     * Example:
-     * ```ts
-     * const searchMethod = new GridSearch() 
-     * searchMethod.setInteractiveSolution({Rrot: rot, stressRatio: 0.5})
-     * 
-     * const criterion = new Etchecopar({faultSet, maxNbFault: 100})
-     * 
-     * const initSolution = createDefaultSolution(criterion)
-     * 
-     * for (let i=0; i<100; ++i) {
-     *      const solution = searchMethod.run(initSolution)
-     * }
-     * ``` 
-     */
     run(data: Data[], misfitCriteriaSolution: MisfitCriteriunSolution): MisfitCriteriunSolution {
-        // The optimum stress tensor is calculated by exploring the stress orientations and the stress ratio around the approximate solution S0
-        // obtained by the user during the interactive analysis of flow lines on the sphere, Mohr circle diagram, and histogram of signed angular deviations.
-        // More precisely, the minimization function is calculated in the nodes of a four-dimmensional grid that sweeps the area around S0
+        const nodesAngle = Math.ceil(this.GridAngleHalfIntervalS / this.deltaGridAngle)
+        const nodesR     = Math.ceil(this.stressRatioHalfInterval / this.deltaStressRatio)
+        const dAngle     = deg2rad(this.deltaGridAngle)
 
-        // The angular node interval englobes the angular interval around the estimated stress directions defined by the user
-        let nodesAngleInterval = Math.ceil( this.GridAngleHalfIntervalS / this.deltaGridAngle )
-        // The stress ratio node interval englobes the stress ratio interval around the estimated value defined by the user
-        let nodesStressRatioInterval = Math.ceil( this.stressRatioHalfInterval / this.deltaStressRatio )
+        // Build value arrays for each axis.
+        // Free axes: [-N … +N] steps.  Fixed axes: single value.
+        const phiOffsets   = this.sweepPhi   ? iRange(-nodesAngle, nodesAngle) : [0]
+        const thetaOffsets = this.sweepTheta ? iRange(-nodesAngle, nodesAngle) : [0]
+        const alphaOffsets = this.sweepAlpha ? iRange(-nodesAngle, nodesAngle) : [0]
+        const rOffsets     = this.sweepR     ? iRange(-nodesR,     nodesR)     : [0]
 
-        let deltaGridAngleRad = deg2rad( this.deltaGridAngle )
- 
-        let DTrot: Matrix3x3   = newMatrix3x3()
-        let Drot:  Matrix3x3   = newMatrix3x3()
-        let WTrot: Matrix3x3   = newMatrix3x3()
-        let Wrot:  Matrix3x3   = newMatrix3x3()
+        const fixedRValue = this.fixedR ?? this.stressRatio0
 
-        let inc = 0
+        let DTrot: Matrix3x3 = newMatrix3x3()
+        let Drot:  Matrix3x3 = newMatrix3x3()
+        let WTrot: Matrix3x3 = newMatrix3x3()
+        let Wrot:  Matrix3x3 = newMatrix3x3()
 
         const newSolution = cloneMisfitCriteriunSolution(misfitCriteriaSolution)
+        const total = phiOffsets.length * thetaOffsets.length * alphaOffsets.length * rOffsets.length
+        let inc = 0
 
-        for (let i = - nodesAngleInterval; i <= nodesAngleInterval; i++) {
-            // Angular variation around axis Xr: ROLL
-            let deltaPhi = i * deltaGridAngleRad
-            let cosDeltaPhi = Math.cos(deltaPhi)
-            let sinDeltaPhi = Math.sin(deltaPhi)
-            for (let j = - nodesAngleInterval; j <= nodesAngleInterval; j++) {
-                // Angular variation around axis Yr: PITCH
-                let deltaTheta = j * deltaGridAngleRad
-                let cosDeltaTheta = Math.cos(deltaTheta)
-                let sinDeltaTheta = Math.sin(deltaTheta)
-                for (let k = - nodesAngleInterval; k <= nodesAngleInterval; k++) {
-                    // Angular variation around axis Zr: YAW
-                    const deltaAlpha = k * deltaGridAngleRad
-                    let cosDeltaAlpha = Math.cos(deltaAlpha)
-                    let sinDeltaAlpha = Math.sin(deltaAlpha)
+        for (const i of phiOffsets) {
+            const deltaPhi = this.sweepPhi ? i * dAngle : this.fixedPhiRad
+            const cosPhi = Math.cos(deltaPhi), sinPhi = Math.sin(deltaPhi)
 
-                    // Calculate rotation tensors Drot and DTrot between systems Sr and Sw such that:
-                    //  Vr  = DTrot Vw        (DTrot is tensor Drot transposed)
-                    //  Vw = Drot  Vr
-                    DTrot = rotationTensorDT(cosDeltaPhi,sinDeltaPhi,cosDeltaTheta,sinDeltaTheta,cosDeltaAlpha,sinDeltaAlpha)
+            for (const j of thetaOffsets) {
+                const deltaTheta = this.sweepTheta ? j * dAngle : this.fixedThetaRad
+                const cosTheta = Math.cos(deltaTheta), sinTheta = Math.sin(deltaTheta)
+
+                for (const k of alphaOffsets) {
+                    const deltaAlpha = this.sweepAlpha ? k * dAngle : this.fixedAlphaRad
+                    const cosAlpha = Math.cos(deltaAlpha), sinAlpha = Math.sin(deltaAlpha)
+
+                    DTrot = rotationTensorDT(cosPhi, sinPhi, cosTheta, sinTheta, cosAlpha, sinAlpha)
                     Drot  = transposeTensor(DTrot)
+                    WTrot = multiplyTensors({ A: transposeTensor(this.Rrot), B: DTrot })
+                    Wrot  = transposeTensor(WTrot)
 
-                    // To analyse the distribution of rotation axes in space: (these instructions can be deleted once the analysis is done)
-                    // The cartesian and spherical coords of a unit vector corresponding to the rotation axis are determined 
-                    // from the components of the tensor definning a proper rotation
-                    // let {rotAxis, rotAxisSpheCoords, rotMag} = rotationParamsFromRotTensor({rotTensor: DTrot}) // **
+                    for (const l of rOffsets) {
+                        const stressRatio = this.sweepR
+                            ? this.stressRatio0 + l * this.deltaStressRatio
+                            : fixedRValue
 
-                    // Calculate rotation tensors Wrot and WTrot between systems S and Sw: WTrot = RTrot DTrot, such that:
-                    //  V   = WTrot Vw        (WTrot is tensor Wrot transposed)
-                    //  Vw = Wrot  V
-                    //  S   =  (X, Y, Z ) is the geographic reference frame  oriented in (East, North, Up) directions.
-                    //  Sw =  (Xw, Yw, Zw ) is the principal reference frame for a fixed node in the search grid (sigma_1, sigma_3, sigma_2) ('w' stands for 'winning' solution)
-                    //      The letters 'W' and 'w' stand for 'Win' since the search method leads to the winning solution. 
-                    WTrot = multiplyTensors({A: transposeTensor(this.Rrot), B: DTrot })
-                    //  Wrot = Drot Rrot
-                    Wrot  = transposeTensor( WTrot )
+                        if (stressRatio < 0 || stressRatio > 1) continue
 
-                    this.engine.setHypotheticalStress(Wrot, this.stressRatio0)
+                        this.engine.setHypotheticalStress(Wrot, stressRatio)
+                        const STdelta = stressTensorDelta(stressRatio, Wrot, WTrot)
 
-                    for (let l = - nodesStressRatioInterval; l <= nodesStressRatioInterval; l++) {
-                        // Stress ratio variation around R = (S2-S3)/(S1-S3)
-                        let stressRatio = this.stressRatio0 + l * this.deltaStressRatio
-                        if ( stressRatio >= 0 && stressRatio <= 1 ) {   // The strees ratio is in interval [0,1]
+                        const misfit = data.reduce((prev, cur) =>
+                            prev + cur.cost({ stress: this.engine.stress(cur.position) })
+                        , 0) / data.length
 
-                            // Calculate the stress tensor STdelta in reference frame S from the stress tensor in reference frame Sw
-                            const STdelta = stressTensorDelta(stressRatio, Wrot, WTrot)
-
-                            // !!! ALFREDO
-                            // this.engine.setRemoteStress(STdelta)
-
-                            const misfit = data.reduce( (previous, current) => {
-                                return previous + current.cost({stress: this.engine.stress(current.position)}
-                            )} , 0) / data.length
-
-                            if (misfit < newSolution.misfit) {
-                                newSolution.misfit = misfit
-                                newSolution.rotationMatrixD = cloneMatrix3x3(Drot)
-                                newSolution.rotationMatrixW = cloneMatrix3x3(Wrot)
-                                newSolution.stressRatio = stressRatio
-                                newSolution.stressTensorSolution = STdelta
-                            }
-
-                            inc++
+                        if (misfit < newSolution.misfit) {
+                            newSolution.misfit               = misfit
+                            newSolution.rotationMatrixD      = cloneMatrix3x3(Drot)
+                            newSolution.rotationMatrixW      = cloneMatrix3x3(Wrot)
+                            newSolution.stressRatio          = stressRatio
+                            newSolution.stressTensorSolution = STdelta
                         }
-                    }                
+
+                        inc++
+                        const pct = (inc / total) * 100
+                        if (pct % 10 < (1 / total) * 100) this.sendMessage(`${Math.floor(pct)}`)
+                    }
                 }
             }
         }
 
         return newSolution
-
-        // To analyse the rotation axis for the best solution: 
-        // The cartesian and spherical coords of a unit vector corresponding to the rotation axis are determined 
-        // from the components of the tensor definning a proper rotation
-        // let {rotAxis, rotAxisSpheCoords, rotMag} = rotationParamsFromRotTensor(DTrot) // **
     }
 }
 
-// --------------- Hidden to users
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function rotationTensorDT(cosDeltaPhi: number, sinDeltaPhi : number, cosDeltaTheta : number,sinDeltaTheta : number,
-    cosDeltaAlpha : number, sinDeltaAlpha: number ): Matrix3x3
-{
-    // Calculate the rotation tensor DT between reference frame Sr and Sw, such that:
-    //  Vr  = DT Vw        (DT is tensor D transposed)
-    //  Vw = D  Vr
-    //  Sr = (Xr,Yr,Zr) is the principal stress reference frame obtained by the user from the interactive analysis, parallel to (sigma_1, sigma_3, sigma_2);
-    //      'r' stands for 'rough' solution
-    //  Sw =  (Xw, Yw, Zw ) is the principal reference frame for a fixed node in the search grid (sigma_1, sigma_3, sigma_2) ('w' stands for 'winning' solution)
+/** Integer range [lo, hi] inclusive */
+function iRange(lo: number, hi: number): number[] {
+    const out: number[] = []
+    for (let i = lo; i <= hi; i++) out.push(i)
+    return out
+}
 
-    // The columns of matrix D are given by the unit vectors parallel to X1'', X2'', and X3'' defined in reference system Sr :
-
+function rotationTensorDT(
+    cosDeltaPhi: number, sinDeltaPhi: number,
+    cosDeltaTheta: number, sinDeltaTheta: number,
+    cosDeltaAlpha: number, sinDeltaAlpha: number
+): Matrix3x3 {
     const DT: Matrix3x3 = newMatrix3x3()
 
     // Sigma_1 axis: Unit vector e1''

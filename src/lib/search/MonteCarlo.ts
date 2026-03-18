@@ -8,7 +8,9 @@ import {
     rand,
     spherical2unitVectorCartesian, SphericalCoords, transposeTensor, TwoPi
 } from "../types"
+import { MCMCSample } from "./MCMC"
 import { SearchMethod } from "./SearchMethod"
+import { computeStressAxesStats, StressAxesStats } from "./axisStats"
 // import { stressTensorDelta } from "./utils"
 
 export type MonteCarloParams = {
@@ -30,9 +32,12 @@ export class MonteCarlo extends SearchMethod {
     private Rrot: Matrix3x3 = undefined
     private RTrot: Matrix3x3 = undefined
     private engine: Engine = new HomogeneousEngine()
+    private allTrials: MCMCSample[] = []
+    private topFraction: number = 0.05
+    private bestFitWrot: Matrix3x3 | undefined
 
     constructor(
-        { stressRatio = 0.5, stressRatioHalfInterval = 0.25, rotAngleHalfInterval = Math.PI, nbRandomTrials = 1000, Rrot = newMatrix3x3Identity() }:
+        { stressRatio = 0.5, stressRatioHalfInterval = 0.5, rotAngleHalfInterval = Math.PI, nbRandomTrials = 20000, Rrot = newMatrix3x3Identity() }:
             MonteCarloParams = {}) {
         super()
         this.rotAngleHalfInterval = rotAngleHalfInterval
@@ -66,6 +71,111 @@ export class MonteCarlo extends SearchMethod {
         this.stressRatio0 = stressRatio
     }
 
+    getChain(): MCMCSample[] {
+        if (this.allTrials.length === 0) return []
+        const sorted = [...this.allTrials].sort((a, b) => a.misfit - b.misfit)
+        const cutoff = Math.max(1, Math.ceil(sorted.length * this.topFraction))
+        return sorted.slice(0, cutoff)
+    }
+
+    getStats(): {
+        acceptanceRate: number,
+        chainLength: number,
+        stressRatio: { mean: number, std: number, q05: number, q95: number },
+        misfit: { mean: number, std: number, min: number },
+        eulerAngles: {
+            phi: { mean: number, std: number, q05: number, q95: number },
+            theta: { mean: number, std: number, q05: number, q95: number },
+            psi: { mean: number, std: number, q05: number, q95: number }
+        },
+        distributions: {
+            stressRatio: number[],
+            phi: number[],
+            theta: number[],
+            psi: number[]
+        },
+        axesStats?: StressAxesStats
+    } | null {
+        const chain = this.getChain()
+        if (chain.length === 0) return null
+
+        const n = chain.length
+        const ratios = chain.map(s => s.stressRatio)
+        const misfits = chain.map(s => s.misfit)
+
+        const mean = (arr: number[]) => arr.reduce((a, b) => a + b, 0) / arr.length
+        const std = (arr: number[], m: number) =>
+            Math.sqrt(arr.reduce((s, v) => s + (v - m) ** 2, 0) / arr.length)
+        const quantile = (sorted: number[], q: number) => {
+            const pos = q * (sorted.length - 1)
+            const lo = Math.floor(pos)
+            const hi = Math.ceil(pos)
+            return sorted[lo] + (sorted[hi] - sorted[lo]) * (pos - lo)
+        }
+
+        const ratioMean = mean(ratios)
+        const sortedRatios = [...ratios].sort((a, b) => a - b)
+        const misfitMean = mean(misfits)
+
+        // Euler angles (ZXZ convention) from Wrot — same row permutation [0,2,1] as MCMC
+        const RAD2DEG = 180 / Math.PI
+        const phiArr: number[] = []
+        const thetaArr: number[] = []
+        const psiArr: number[] = []
+
+        for (const sample of chain) {
+            const w = sample.Wrot
+            const r = [w[0], w[2], w[1]]
+            const theta = Math.acos(Math.max(-1, Math.min(1, r[2][2])))
+            let phi: number, psi: number
+            if (Math.abs(Math.sin(theta)) < 1e-6) {
+                phi = 0
+                psi = Math.atan2(-r[0][1], r[0][0])
+            } else {
+                phi = Math.atan2(r[0][2], -r[1][2])
+                psi = Math.atan2(r[2][0], r[2][1])
+            }
+            phiArr.push(phi * RAD2DEG)
+            thetaArr.push(theta * RAD2DEG)
+            psiArr.push(psi * RAD2DEG)
+        }
+
+        const angleStats = (arr: number[]) => {
+            const m = mean(arr)
+            const s = std(arr, m)
+            const sorted = [...arr].sort((a, b) => a - b)
+            return { mean: m, std: s, q05: quantile(sorted, 0.05), q95: quantile(sorted, 0.95) }
+        }
+
+        return {
+            acceptanceRate: this.topFraction * 100,
+            chainLength: n,
+            stressRatio: {
+                mean: ratioMean,
+                std: std(ratios, ratioMean),
+                q05: quantile(sortedRatios, 0.05),
+                q95: quantile(sortedRatios, 0.95)
+            },
+            misfit: {
+                mean: misfitMean,
+                std: std(misfits, misfitMean),
+                min: Math.min(...misfits)
+            },
+            eulerAngles: {
+                phi: angleStats(phiArr),
+                theta: angleStats(thetaArr),
+                psi: angleStats(psiArr)
+            },
+            distributions: {
+                stressRatio: ratios,
+                phi: phiArr,
+                theta: thetaArr,
+                psi: psiArr
+            },
+            axesStats: computeStressAxesStats(chain, this.bestFitWrot) ?? undefined
+        }
+    }
+
     run(dataset: Data[], misfitCriteriaSolution: MisfitCriteriunSolution): MisfitCriteriunSolution {
         // The optimum stress tensor is calculated by exploring the stress orientations and the stress ratio around the approximate solution Sr (r = rough solution)
         // obtained by the user during the interactive analysis of flow lines on the sphere, Mohr circle diagram, and histogram of signed angular deviations.
@@ -94,6 +204,8 @@ export class MonteCarlo extends SearchMethod {
 
         let changed = false
         const newSolution = cloneMisfitCriteriunSolution(misfitCriteriaSolution)
+        this.allTrials = []
+        this.bestFitWrot = undefined
 
         for (let i = 0; i <= this.nbRandomTrials; i++) {
             // For each trial, a rotation axis in the unit sphere is calculated from a uniform random distribution.
@@ -148,7 +260,14 @@ export class MonteCarlo extends SearchMethod {
                 newSolution.rotationMatrixW = cloneMatrix3x3(Wrot)
                 newSolution.stressRatio = stressRatio
                 newSolution.stressTensorSolution = this.engine.S() // was STdelta
+                this.bestFitWrot = cloneMatrix3x3(Wrot)
             }
+
+            this.allTrials.push({
+                stressRatio,
+                Wrot: cloneMatrix3x3(Wrot),
+                misfit
+            })
 
             inc++
 
@@ -159,5 +278,5 @@ export class MonteCarlo extends SearchMethod {
         }
         return newSolution
 
-    }  
+    }
 }

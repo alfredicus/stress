@@ -1,5 +1,11 @@
 import { HypotheticalSolutionTensorParameters } from "../../geomeca"
-import { Matrix3x3, Vector3, add_Vectors, constant_x_Vector, crossProduct, deg2rad, minRotAngleRotationTensor, multiplyTensors, newMatrix3x3, normalizeVector, normalizedCrossProduct, properRotationTensor, rotationTensor_Sa_Sb, scalarProduct, tensor_x_Vector, transposeTensor, vectorMagnitude } from "../../types"
+import { 
+    Matrix3x3, Vector3, add_Vectors, constant_x_Vector, crossProduct, 
+    deg2rad, minRotAngleRotationTensor, multiplyTensors, newMatrix3x3, 
+    normalizeVector, normalizedCrossProduct, properRotationTensor, 
+    rotationTensor_Sa_Sb, scalarProduct, tensor_x_Vector, transposeTensor, 
+    vectorMagnitude 
+} from "../../types"
 
 import { DataStatus } from "../DataDescription"
 import { StrengthAngleType, StriatedPlaneProblemType } from "./types"

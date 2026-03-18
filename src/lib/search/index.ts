@@ -4,3 +4,7 @@ export * from './utils'
 
 // export * from './GridSearch'
 export * from './MonteCarlo'
+export * from './MCMC'
+export * from './MCMCQuaternion'
+export * from './MonteCarloQuaternion'
+export * from './axisStats'

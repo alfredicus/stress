@@ -1,6 +1,9 @@
 import { MasterStress, StressTensor } from '../types'
 import { DebugSearch } from './DebugSearch'
 import { GridSearch } from './GridSearch'
+import { MCMC } from './MCMC'
+import { MCMCQuaternion } from './MCMCQuaternion'
+import { MonteCarloQuaternion } from './MonteCarloQuaternion'
 import { MonteCarlo } from './MonteCarlo'
 import { SearchMethod } from './SearchMethod'
 
@@ -54,6 +57,10 @@ export namespace SearchMethodFactory {
 
 }
 
-SearchMethodFactory.bind(GridSearch, 'Grid Search')
+SearchMethodFactory.bind(MonteCarlo, 'Monte Carlo (Euler)')
+SearchMethodFactory.bind(MonteCarloQuaternion, 'Monte Carlo (Quaternion)')
+SearchMethodFactory.bind(MCMC, 'MCMC (Euler)')
+SearchMethodFactory.bind(MCMCQuaternion, 'MCMC (Quaternion)')
+
 SearchMethodFactory.bind(DebugSearch, 'Debug Search')
-SearchMethodFactory.bind(MonteCarlo, 'Monte Carlo')
+SearchMethodFactory.bind(GridSearch, 'Grid Search')
