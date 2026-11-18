@@ -1,6 +1,7 @@
 import { Vector3 } from "../../types"
 import { assertNumberDefined, assertPropertyDefined, getDirection, getTypeOfMovement, isDirectionDefined, isNumberDefined, isPropertyDefined, isTypeOfMovementDefined } from "../../utils/assertJson"
 import { DataStatus } from "../DataDescription"
+import { FractureStrategy } from "../types"
 import { CDirection, CTypeOfMovement, Direction, Plane, Striation, TypeOfMovement } from "./types"
 import { StressData } from "../stress/StressData"
 
@@ -10,6 +11,8 @@ import { StressData } from "../stress/StressData"
  */
 export abstract class FaultData extends StressData {
     protected nStriation: Vector3 = undefined
+    protected strategy: FractureStrategy = FractureStrategy.ANGLE
+    setStrategy(s: FractureStrategy): void { this.strategy = s }
 
     /**
      * Measured striation in the fault plane

@@ -1,10 +1,11 @@
 import { Data } from "../data"
 import { Engine, HomogeneousEngine } from "../geomeca"
 import { cloneMisfitCriteriunSolution, MisfitCriteriunSolution } from "../InverseMethod"
-import { cloneMatrix3x3, deg2rad, Matrix3x3, newMatrix3x3 } from "../types/math"
+import { cloneMatrix3x3, deg2rad, Matrix3x3, newMatrix3x3, newMatrix3x3Identity } from "../types/math"
 import { multiplyTensors, transposeTensor } from "../types/math"
 import { SearchMethod } from "./SearchMethod"
 import { stressTensorDelta } from "./utils"
+
 
 export type GridSearchParams = {
     deltaGridAngle?: number
@@ -42,17 +43,17 @@ export type GridSearchParams = {
 }
 
 export type ExposedGridSearchParams = {
-    deltaGridAngle : {
+    deltaGridAngle: {
         show: false,
         displayName: "Delta grid angle",
         type: "number",
-        range: [1,5]
+        range: [1, 5]
     },
     stressRatio: {
         show: true,
         displayName: "Stress ratio",
         type: "number",
-        range: [0,1]
+        range: [0, 1]
     }
 }
 
@@ -80,71 +81,71 @@ export class GridSearch extends SearchMethod {
     private engine: Engine = new HomogeneousEngine()
 
     // Dimensionality flags (defaults → 4D)
-    private sweepPhi:   boolean
+    private sweepPhi: boolean
     private sweepTheta: boolean
     private sweepAlpha: boolean
-    private sweepR:     boolean
-    private fixedR:     number | undefined
-    private fixedPhiRad:   number
+    private sweepR: boolean
+    private fixedR: number | undefined
+    private fixedPhiRad: number
     private fixedThetaRad: number
     private fixedAlphaRad: number
 
     constructor({
-        deltaGridAngle         = 1,
+        deltaGridAngle = 1,
         GridAngleHalfIntervalS = 30,
         stressRatioHalfInterval = 0.2,
-        deltaStressRatio       = 0.01,
-        sweepPhi               = true,
-        sweepTheta             = true,
-        sweepAlpha             = true,
-        sweepR                 = true,
+        deltaStressRatio = 0.01,
+        sweepPhi = true,
+        sweepTheta = true,
+        sweepAlpha = true,
+        sweepR = true,
         fixedR,
-        fixedPhi   = 0,
+        fixedPhi = 0,
         fixedTheta = 0,
         fixedAlpha = 0,
     }: GridSearchParams = {}) {
         super()
-        this.deltaGridAngle          = deltaGridAngle
-        this.GridAngleHalfIntervalS  = GridAngleHalfIntervalS
+        this.deltaGridAngle = deltaGridAngle
+        this.GridAngleHalfIntervalS = GridAngleHalfIntervalS
         this.stressRatioHalfInterval = stressRatioHalfInterval
-        this.deltaStressRatio        = deltaStressRatio
-        this.sweepPhi                = sweepPhi
-        this.sweepTheta              = sweepTheta
-        this.sweepAlpha              = sweepAlpha
-        this.sweepR                  = sweepR
-        this.fixedR                  = fixedR
-        this.fixedPhiRad             = deg2rad(fixedPhi)
-        this.fixedThetaRad           = deg2rad(fixedTheta)
-        this.fixedAlphaRad           = deg2rad(fixedAlpha)
+        this.deltaStressRatio = deltaStressRatio
+        this.sweepPhi = sweepPhi
+        this.sweepTheta = sweepTheta
+        this.sweepAlpha = sweepAlpha
+        this.sweepR = sweepR
+        this.fixedR = fixedR
+        this.fixedPhiRad = deg2rad(fixedPhi)
+        this.fixedThetaRad = deg2rad(fixedTheta)
+        this.fixedAlphaRad = deg2rad(fixedAlpha)
     }
 
     setEngine(engine: Engine): void { this.engine = engine }
-    getEngine(): Engine             { return this.engine }
-    setOptions(_json: any): void    {}
+    getEngine(): Engine { return this.engine }
+    setOptions(_json: any): void { }
 
     setInteractiveSolution({ rot, stressRatio }: { rot: Matrix3x3; stressRatio: number }): void {
-        this.Rrot        = rot
+        this.Rrot = rot
         this.stressRatio0 = stressRatio
     }
 
     run(data: Data[], misfitCriteriaSolution: MisfitCriteriunSolution): MisfitCriteriunSolution {
         const nodesAngle = Math.ceil(this.GridAngleHalfIntervalS / this.deltaGridAngle)
-        const nodesR     = Math.ceil(this.stressRatioHalfInterval / this.deltaStressRatio)
-        const dAngle     = deg2rad(this.deltaGridAngle)
+        const nodesR = Math.ceil(this.stressRatioHalfInterval / this.deltaStressRatio)
+        const dAngle = deg2rad(this.deltaGridAngle)
 
         // Build value arrays for each axis.
         // Free axes: [-N … +N] steps.  Fixed axes: single value.
-        const phiOffsets   = this.sweepPhi   ? iRange(-nodesAngle, nodesAngle) : [0]
+        const phiOffsets = this.sweepPhi ? iRange(-nodesAngle, nodesAngle) : [0]
         const thetaOffsets = this.sweepTheta ? iRange(-nodesAngle, nodesAngle) : [0]
         const alphaOffsets = this.sweepAlpha ? iRange(-nodesAngle, nodesAngle) : [0]
-        const rOffsets     = this.sweepR     ? iRange(-nodesR,     nodesR)     : [0]
+        const rOffsets = this.sweepR ? iRange(-nodesR, nodesR) : [0]
 
         const fixedRValue = this.fixedR ?? this.stressRatio0
 
         let DTrot: Matrix3x3 = newMatrix3x3()
-        let Drot:  Matrix3x3 = newMatrix3x3()
+        let Drot: Matrix3x3 = newMatrix3x3()
         let WTrot: Matrix3x3 = newMatrix3x3()
-        let Wrot:  Matrix3x3 = newMatrix3x3()
+        let Wrot: Matrix3x3 = newMatrix3x3()
 
         const newSolution = cloneMisfitCriteriunSolution(misfitCriteriaSolution)
         const total = phiOffsets.length * thetaOffsets.length * alphaOffsets.length * rOffsets.length
@@ -163,9 +164,9 @@ export class GridSearch extends SearchMethod {
                     const cosAlpha = Math.cos(deltaAlpha), sinAlpha = Math.sin(deltaAlpha)
 
                     DTrot = rotationTensorDT(cosPhi, sinPhi, cosTheta, sinTheta, cosAlpha, sinAlpha)
-                    Drot  = transposeTensor(DTrot)
+                    Drot = transposeTensor(DTrot)
                     WTrot = multiplyTensors({ A: transposeTensor(this.Rrot), B: DTrot })
-                    Wrot  = transposeTensor(WTrot)
+                    Wrot = transposeTensor(WTrot)
 
                     for (const l of rOffsets) {
                         const stressRatio = this.sweepR
@@ -179,13 +180,13 @@ export class GridSearch extends SearchMethod {
 
                         const misfit = data.reduce((prev, cur) =>
                             prev + cur.cost({ stress: this.engine.stress(cur.position) })
-                        , 0) / data.length
+                            , 0) / data.length
 
                         if (misfit < newSolution.misfit) {
-                            newSolution.misfit               = misfit
-                            newSolution.rotationMatrixD      = cloneMatrix3x3(Drot)
-                            newSolution.rotationMatrixW      = cloneMatrix3x3(Wrot)
-                            newSolution.stressRatio          = stressRatio
+                            newSolution.misfit = misfit
+                            newSolution.rotationMatrixD = cloneMatrix3x3(Drot)
+                            newSolution.rotationMatrixW = cloneMatrix3x3(Wrot)
+                            newSolution.stressRatio = stressRatio
                             newSolution.stressTensorSolution = STdelta
                         }
 
@@ -218,19 +219,19 @@ function rotationTensorDT(
     const DT: Matrix3x3 = newMatrix3x3()
 
     // Sigma_1 axis: Unit vector e1''
-    DT[0][0] =   cosDeltaPhi * cosDeltaTheta
-    DT[1][0] =   sinDeltaPhi * cosDeltaTheta
+    DT[0][0] = cosDeltaPhi * cosDeltaTheta
+    DT[1][0] = sinDeltaPhi * cosDeltaTheta
     DT[2][0] = - sinDeltaTheta
 
     // Sigma_3 axis: Unit vector e2''
     DT[0][1] = - sinDeltaPhi * cosDeltaAlpha + cosDeltaPhi * sinDeltaTheta * sinDeltaAlpha
-    DT[1][1] =   cosDeltaPhi * cosDeltaAlpha + sinDeltaPhi * sinDeltaTheta * sinDeltaAlpha
-    DT[2][1] =   cosDeltaTheta * sinDeltaAlpha
+    DT[1][1] = cosDeltaPhi * cosDeltaAlpha + sinDeltaPhi * sinDeltaTheta * sinDeltaAlpha
+    DT[2][1] = cosDeltaTheta * sinDeltaAlpha
 
     // Sigma_2 axis: Unit vector e3''
-    DT[0][2] =   sinDeltaPhi * sinDeltaAlpha + cosDeltaPhi * sinDeltaTheta * cosDeltaAlpha
+    DT[0][2] = sinDeltaPhi * sinDeltaAlpha + cosDeltaPhi * sinDeltaTheta * cosDeltaAlpha
     DT[1][2] = - cosDeltaPhi * sinDeltaAlpha + sinDeltaPhi * sinDeltaTheta * cosDeltaAlpha
-    DT[2][2] =   cosDeltaTheta * cosDeltaAlpha
+    DT[2][2] = cosDeltaTheta * cosDeltaAlpha
 
     return DT
 }

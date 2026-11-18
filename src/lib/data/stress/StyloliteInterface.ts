@@ -20,8 +20,6 @@ import { isPropertyDefined, setPositionIfAny } from "../../utils/assertJson"
  */
   
  export class StyloliteInterface extends FractureData {
-    protected strategy: FractureStrategy = FractureStrategy.ANGLE
-
     // description(): any {
     //     return {
     //         // Mandatory data: 

@@ -109,7 +109,7 @@ export class CStriationType {
 /**
  * @category Data
  */
-export const enum TypeOfMovement {
+export enum TypeOfMovement {
     N = 0,
     I,
     RL, // 2
@@ -244,7 +244,7 @@ export class CTypeOfMovement {
 /**
  * @category Data
  */
-export const enum Direction {
+export enum Direction {
     E = 0, // 0
     W, // 1
     N, // 2

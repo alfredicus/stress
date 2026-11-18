@@ -18,6 +18,8 @@ export * from './stress/ExtensionFracture'
 // export * from './StriatedPlane_Friction1'
 // export * from './StriatedPlane_Friction2'
 export * from './fault/StriatedPlane_Kin'
+export { FaultDataHelper } from './fault/FaultDataHelper'
+export { Direction, CDirection, TypeOfMovement, CTypeOfMovement, Plane, Striation, createPlane, createStriation } from './fault/types'
 export * from './stress/StyloliteInterface'
 // export * from './StyloliteTeeth'
 

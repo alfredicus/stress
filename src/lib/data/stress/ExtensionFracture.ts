@@ -33,7 +33,6 @@ import { isPropertyDefined, setPositionIfAny } from "../../utils/assertJson"
  */
 export class ExtensionFracture extends FractureData {
     // protected nPlane: Vector3 = undefined
-    protected strategy: FractureStrategy = FractureStrategy.ANGLE
 
     /**
      * @brief Initialize the data from a JSON object

@@ -5,8 +5,6 @@ import { DataStatus } from "../DataDescription"
 import { FractureData } from "./FractureData"
 
 export class ShearFracture extends FractureData {
-    protected strategy: FractureStrategy = FractureStrategy.ANGLE
-
     initialize(obj: any): DataStatus {
         super.initialize(obj)
         throw 'TODO: ShearFracture.initialize'

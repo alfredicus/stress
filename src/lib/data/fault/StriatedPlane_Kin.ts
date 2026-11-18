@@ -1,7 +1,7 @@
 import { Matrix3x3, normalizeVector, scalarProductUnitVectors, Vector3 } from "../../types"
 import { faultStressComponents } from "../../types/mechanics"
-import {FaultDataHelper} from "./FaultDataHelper"
-import { Direction, TypeOfMovement, CTypeOfMovement, CDirection} from './types'
+import { FaultDataHelper } from "./FaultDataHelper"
+import { Direction, TypeOfMovement, CTypeOfMovement, CDirection } from './types'
 import { StriatedPlaneProblemType, createPlane, createStriation } from "./types"
 import { Engine, HypotheticalSolutionTensorParameters } from "../../geomeca"
 import { createDataStatus, DataStatus } from "../DataDescription"
@@ -13,7 +13,6 @@ import { FractureStrategy } from "../types"
  */
 export class StriatedPlaneKin extends FaultData {
     protected problemType = StriatedPlaneProblemType.DYNAMIC
-    protected strategy = FractureStrategy.ANGLE
     protected oriented = true
     protected EPS = 1e-7
     protected epsMagnitude = 1e-3
@@ -39,11 +38,11 @@ export class StriatedPlaneKin extends FaultData {
         super.initialize(jsonObject)
 
         const result = createDataStatus()
-        
+
         // Read parameters definning plane orientation, striation orientation and type of movement
         const plane = createPlane()
         const striation = createStriation()
-        
+
         this.readStriatedFaultPlane(jsonObject, plane, striation, result)
 
         // -----------------------------------
@@ -107,11 +106,11 @@ export class StriatedPlaneKin extends FaultData {
                 // The misfit is defined by the angular difference (in radians) between measured and calculated striae
                 if (this.oriented) {
                     // The sense of the striation is known
-                    return Math.acos(cosAngularDifStriae)
+                    return Math.acos(cosAngularDifStriae) / Math.PI
                 } else {
                     // The sense of the striation is not known. Thus, we choose the sens that minimizes the angular difference 
                     // and is more compatible with the observed striation.
-                    return Math.acos(Math.abs(cosAngularDifStriae))
+                    return Math.acos(Math.abs(cosAngularDifStriae)) / Math.PI
                 }
             } else {
                 // The misfit is defined by the the cosine of the angular difference between measured and calculated striae
@@ -129,21 +128,21 @@ export class StriatedPlaneKin extends FaultData {
      * Computed optimal normal and striation vectors for a given stress tensor.
      * Only called when the solution is found.
      */
-    predict(engine: Engine, { displ, strain, stress }: { displ?: Vector3; strain?: HypotheticalSolutionTensorParameters; stress?: HypotheticalSolutionTensorParameters }): {normal: Vector3, striation: Vector3} {
+    predict(engine: Engine, { displ, strain, stress }: { displ?: Vector3; strain?: HypotheticalSolutionTensorParameters; stress?: HypotheticalSolutionTensorParameters }): { normal: Vector3, striation: Vector3 } {
         const { shearStress, normalStress, shearStressMag } = faultStressComponents({ stressTensor: stress.S, normal: this.nPlane })
 
         if (shearStressMag > this.epsMagnitude) {
             // nShearStress = unit vector parallel to the shear stress (i.e. representing the calculated striation)
             const nShearStress = normalizeVector(shearStress, shearStressMag)
-            return { 
+            return {
                 normal: this.normal,
                 striation: nShearStress
             }
         } else {
             // throw `Data number ${this.toks[0]} of type "${this.toks[1]}": Magnitude of the shear stress is close to zero!`
-            return { 
+            return {
                 normal: this.normal,
-                striation: [0,0,0]
+                striation: [0, 0, 0]
             }
         }
     }
